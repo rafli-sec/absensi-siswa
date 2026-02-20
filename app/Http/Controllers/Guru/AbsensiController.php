@@ -35,7 +35,9 @@ class AbsensiController extends Controller
                 'absensis.jam_ke',
                 DB::raw('count(absensis.id_absensi) as total_siswa'),
                 DB::raw("SUM(CASE WHEN status_kehadiran = 'hadir' THEN 1 ELSE 0 END) as hadir"),
-                DB::raw("SUM(CASE WHEN status_kehadiran != 'hadir' THEN 1 ELSE 0 END) as tidak_hadir"),
+                DB::raw("SUM(CASE WHEN status_kehadiran = 'izin' THEN 1 ELSE 0 END) as izin"),
+                DB::raw("SUM(CASE WHEN status_kehadiran = 'sakit' THEN 1 ELSE 0 END) as sakit"),
+                DB::raw("SUM(CASE WHEN status_kehadiran = 'alpha' THEN 1 ELSE 0 END) as alpha"),
                 DB::raw("MAX(absensis.tanggal) as tanggal")
             )
             ->join('siswas', 'absensis.id_siswa', '=', 'siswas.id_siswa')

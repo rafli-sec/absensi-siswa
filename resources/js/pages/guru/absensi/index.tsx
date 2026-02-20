@@ -1,8 +1,8 @@
 import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { BreadcrumbItem } from '@/types';
-// Tambahkan ArrowRight di import ini
-import { Pencil, Trash2, Plus, Calendar, Users, CheckCircle, XCircle, BookOpen, Clock, ArrowRight } from 'lucide-react';
+// Menambahkan ikon FileText (Izin) dan Thermometer (Sakit)
+import { Pencil, Trash2, Plus, Calendar, CheckCircle, XCircle, BookOpen, Clock, ArrowRight, FileText, Thermometer } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/guru/dashboard' },
@@ -11,7 +11,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 export default function index({ rekapAbsensi = [], filters }: any) {
     
-    // Fungsi hapus disesuaikan dengan parameter unik: kelas, tanggal, mapel, dan jam_ke
+    // Fungsi hapus disesuaikan dengan parameter unik
     const handleDelete = (rekap: any) => {
         if (confirm(`Hapus absensi Kelas ${rekap.kelas} - ${rekap.mapel} (Jam ke-${rekap.jam_ke})?`)) {
             router.delete(route('guru.absensi.destroy', { 
@@ -27,7 +27,7 @@ export default function index({ rekapAbsensi = [], filters }: any) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Riwayat Absensi" />
 
-            <div className="p-4 md:p-6 w-full max-w-full">
+            <div className="p-4 md:p-6 w-full max-w-full animate-in fade-in duration-500">
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                     <div>
@@ -79,6 +79,8 @@ export default function index({ rekapAbsensi = [], filters }: any) {
                                 {rekapAbsensi.length > 0 ? (
                                     rekapAbsensi.map((rekap: any, index: number) => (
                                         <tr key={index} className="hover:bg-slate-50/50 transition-colors group">
+                                            
+                                            {/* Sesi Pelajaran */}
                                             <td className="p-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className="h-10 w-10 rounded-xl bg-slate-100 flex flex-col items-center justify-center text-slate-500 group-hover:bg-blue-600 group-hover:text-white transition-all">
@@ -94,43 +96,45 @@ export default function index({ rekapAbsensi = [], filters }: any) {
                                                     </div>
                                                 </div>
                                             </td>
+
+                                            {/* Kelas */}
                                             <td className="p-4 text-center">
                                                 <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200 uppercase">
                                                     {rekap.kelas}
                                                 </span>
                                             </td>
+
+                                            {/* Statistik Kehadiran Lengkap */}
                                             <td className="p-4">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full text-xs font-bold border border-emerald-100">
-                                                        <CheckCircle size={14} />
-                                                        {rekap.hadir} Hadir
+                                                <div className="flex flex-wrap gap-2">
+                                                    <span className="flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border border-emerald-100">
+                                                        <CheckCircle size={12} /> {rekap.hadir || 0} Hadir
                                                     </span>
-                                                    <span className="flex items-center gap-1.5 bg-rose-50 text-rose-700 px-2.5 py-1 rounded-full text-xs font-bold border border-rose-100">
-                                                        <XCircle size={14} />
-                                                        {rekap.tidak_hadir} Absen
+                                                    <span className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border border-blue-100">
+                                                        <FileText size={12} /> {rekap.izin || 0} Izin
+                                                    </span>
+                                                    <span className="flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border border-amber-100">
+                                                        <Thermometer size={12} /> {rekap.sakit || 0} Sakit
+                                                    </span>
+                                                    <span className="flex items-center gap-1 bg-rose-50 text-rose-700 px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border border-rose-100">
+                                                        <XCircle size={12} /> {rekap.alpha || 0} Alpha
                                                     </span>
                                                 </div>
                                             </td>
+
+                                            {/* Total Siswa */}
                                             <td className="p-4 text-center">
                                                 <div className="flex flex-col items-center">
                                                     <span className="text-lg font-black text-slate-800 leading-none">{rekap.total_siswa}</span>
                                                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Siswa</span>
                                                 </div>
                                             </td>
+
+                                            {/* Kolom Aksi (Edit, Detail, Hapus) */}
                                             <td className="p-4">
                                                 <div className="flex items-center justify-center gap-2">
-                                                     <Link 
-                                                        href={route('guru.absensi.show', { 
-                                                            kelas: rekap.kelas, 
-                                                            tanggal: rekap.tanggal,
-                                                            mapel: rekap.mapel,
-                                                            jam_ke: rekap.jam_ke
-                                                        })}
-                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-colors border border-blue-100 hover:border-blue-600 shadow-sm"
-                                                        title="Lihat Rincian Kehadiran Siswa"
-                                                    >
-                                                        Detail <ArrowRight size={12} />
-                                                    </Link>
+                                                    
+                                                    {/* TOMBOL EDIT AKTIF */}
                                                     <Link
                                                         href={route('guru.absensi.edit', { 
                                                             kelas: rekap.kelas, 
@@ -138,24 +142,35 @@ export default function index({ rekapAbsensi = [], filters }: any) {
                                                             mapel: rekap.mapel,
                                                             jam_ke: rekap.jam_ke
                                                         })}
-                                                        className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors border border-transparent hover:border-amber-100"
+                                                        className="p-2 text-amber-600 hover:bg-amber-600 hover:text-white bg-amber-50 rounded-lg transition-colors border border-amber-200 shadow-sm"
                                                         title="Edit Sesi Ini"
                                                     >
-                                                        <Pencil size={18} />
+                                                        <Pencil size={16} />
                                                     </Link>
+
+                                                    {/* TOMBOL DETAIL */}
+                                                    <Link 
+                                                        href={route('guru.absensi.show', { 
+                                                            kelas: rekap.kelas, 
+                                                            tanggal: rekap.tanggal,
+                                                            mapel: rekap.mapel,
+                                                            jam_ke: rekap.jam_ke
+                                                        })}
+                                                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-colors border border-blue-200 shadow-sm"
+                                                        title="Lihat Rincian Kehadiran Siswa"
+                                                    >
+                                                        Detail <ArrowRight size={12} />
+                                                    </Link>
+
+                                                    {/* TOMBOL HAPUS */}
                                                     <button
                                                         onClick={() => handleDelete(rekap)}
-                                                        className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors border border-transparent hover:border-rose-100"
+                                                        className="p-2 text-rose-600 hover:bg-rose-600 hover:text-white bg-rose-50 rounded-lg transition-colors border border-rose-200 shadow-sm"
                                                         title="Hapus Sesi Ini"
                                                     >
-                                                        <Trash2 size={18} />
+                                                        <Trash2 size={16} />
                                                     </button>
 
-                                
-                                                   
-
-                                                   
-                                                    
                                                 </div>
                                             </td>
                                         </tr>

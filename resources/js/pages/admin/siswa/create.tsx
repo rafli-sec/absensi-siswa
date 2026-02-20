@@ -4,13 +4,13 @@ import { BreadcrumbItem } from '@/types';
 import { FormEventHandler } from 'react';
 import { 
     User, CreditCard, BookOpen, Phone, MapPin, 
-    Save, X, CheckCircle, Users 
+    Save, X, CheckCircle, Users, GraduationCap 
 } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/admin/dashboard' },
     { title: 'Manajemen Siswa', href: '/admin/siswa' },
-    { title: 'Tambah', href: '#' },
+    { title: 'Tambah Data', href: '#' },
 ];
 
 export default function Create() {
@@ -29,74 +29,95 @@ export default function Create() {
         post(route('admin.siswa.store'));
     };
 
-    const kelasOptions = ['7A', '7B', '7C', '8B', '8B', '8C', '9A'];
+    const kelasOptions = ['7A', '7B', '7C', '8A', '8B', '8C', '9A'];
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Tambah Siswa" />
+            <Head title="Tambah Siswa Baru" />
             
-            <div className="p-6 max-w-5xl mx-auto">
-                <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-                    {/* Header Form */}
-                    <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 border-b border-blue-500">
-                        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                            <User className="h-6 w-6" />
-                            Tambah Siswa Baru
-                        </h2>
-                        <p className="text-blue-100 text-sm mt-1">Lengkapi formulir di bawah ini untuk menambahkan data siswa.</p>
+            <div className="p-6 w-full space-y-8 animate-in fade-in duration-500">
+                
+                {/* 1. Header Halaman (Konsisten dengan Full Width Design) */}
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-100 dark:border-zinc-800 pb-6">
+                    <div>
+                        <h1 className="text-3xl font-black uppercase tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
+                            Tambah Siswa Baru 
+                            <GraduationCap className="text-orange-500" size={28} />
+                        </h1>
+                        <p className="text-slate-500 text-sm mt-1 italic">
+                            Lengkapi profil identitas dan data kontak orang tua untuk integrasi notifikasi WhatsApp.
+                        </p>
                     </div>
+                    <Link 
+                        href={route('admin.siswa.index')}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-slate-300 text-xs font-black uppercase tracking-widest rounded-xl hover:bg-slate-200 dark:hover:bg-zinc-700 transition-all"
+                    >
+                        <X size={16} /> Batal & Kembali
+                    </Link>
+                </div>
 
-                    <form onSubmit={submit} className="p-8">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            
-                            {/* Kolom Kiri: Data Pribadi */}
-                            <div className="space-y-6">
-                                <h3 className="text-gray-800 font-semibold border-b pb-2 mb-4 flex items-center gap-2">
-                                    <User size={18} className="text-blue-600" /> Data Pribadi
+                {/* 2. Form Container Utama */}
+                <form onSubmit={submit} className="bg-white dark:bg-zinc-900 rounded-[2rem] border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden transition-all">
+                    
+                    <div className="p-8 md:p-10 grid grid-cols-1 lg:grid-cols-2 gap-12">
+                        
+                        {/* --- BAGIAN KIRI: DATA PRIBADI --- */}
+                        <div className="space-y-8">
+                            <div className="flex items-center gap-3 border-b border-slate-100 dark:border-zinc-800 pb-4">
+                                <div className="p-2.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl">
+                                    <User size={20} />
+                                </div>
+                                <h3 className="text-lg font-black uppercase tracking-tighter text-slate-800 dark:text-slate-200">
+                                    Data Pribadi
                                 </h3>
+                            </div>
 
+                            <div className="space-y-6">
+                                {/* NIS */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">NIS</label>
+                                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">Nomor Induk Siswa (NIS)</label>
                                     <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <CreditCard size={18} className="text-gray-400" />
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <CreditCard size={16} className="text-slate-400" />
                                         </div>
                                         <input
                                             type="text"
-                                            className="w-full pl-10 border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                            className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-slate-800 dark:text-slate-200 focus:ring-orange-500 focus:border-orange-500 transition-all"
                                             value={data.nis}
                                             onChange={(e) => setData('nis', e.target.value)}
-                                            placeholder="Nomor Induk Siswa"
+                                            placeholder="Masukkan NIS..."
                                         />
                                     </div>
-                                    {errors.nis && <p className="text-red-500 text-xs mt-1">{errors.nis}</p>}
+                                    {errors.nis && <p className="text-rose-500 text-[10px] font-bold uppercase tracking-widest mt-2">{errors.nis}</p>}
                                 </div>
 
+                                {/* Nama Lengkap */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
+                                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">Nama Lengkap Siswa</label>
                                     <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <User size={18} className="text-gray-400" />
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <User size={16} className="text-slate-400" />
                                         </div>
                                         <input
                                             type="text"
-                                            className="w-full pl-10 border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                            className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-slate-800 dark:text-slate-200 focus:ring-orange-500 focus:border-orange-500 transition-all"
                                             value={data.nama_siswa}
                                             onChange={(e) => setData('nama_siswa', e.target.value)}
-                                            placeholder="Nama Siswa"
+                                            placeholder="Nama sesuai ijazah..."
                                         />
                                     </div>
-                                    {errors.nama_siswa && <p className="text-red-500 text-xs mt-1">{errors.nama_siswa}</p>}
+                                    {errors.nama_siswa && <p className="text-rose-500 text-[10px] font-bold uppercase tracking-widest mt-2">{errors.nama_siswa}</p>}
                                 </div>
 
+                                {/* Jenis Kelamin */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Jenis Kelamin</label>
+                                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">Jenis Kelamin</label>
                                     <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <Users size={18} className="text-gray-400" />
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <Users size={16} className="text-slate-400" />
                                         </div>
                                         <select
-                                            className="w-full pl-10 border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                            className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-slate-800 dark:text-slate-200 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none cursor-pointer"
                                             value={data.jenis_kelamin}
                                             onChange={(e) => setData('jenis_kelamin', e.target.value)}
                                         >
@@ -104,116 +125,122 @@ export default function Create() {
                                             <option value="perempuan">Perempuan</option>
                                         </select>
                                     </div>
-                                    {errors.jenis_kelamin && <p className="text-red-500 text-xs mt-1">{errors.jenis_kelamin}</p>}
+                                    {errors.jenis_kelamin && <p className="text-rose-500 text-[10px] font-bold uppercase tracking-widest mt-2">{errors.jenis_kelamin}</p>}
                                 </div>
                             </div>
+                        </div>
 
-                            {/* Kolom Kanan: Akademik & Kontak */}
-                            <div className="space-y-6">
-                                <h3 className="text-gray-800 font-semibold border-b pb-2 mb-4 flex items-center gap-2">
-                                    <BookOpen size={18} className="text-blue-600" /> Akademik & Kontak
+                        {/* --- BAGIAN KANAN: AKADEMIK & KONTAK --- */}
+                        <div className="space-y-8">
+                            <div className="flex items-center gap-3 border-b border-slate-100 dark:border-zinc-800 pb-4">
+                                <div className="p-2.5 bg-orange-50 dark:bg-orange-900/20 text-[#F53003] dark:text-orange-400 rounded-xl">
+                                    <BookOpen size={20} />
+                                </div>
+                                <h3 className="text-lg font-black uppercase tracking-tighter text-slate-800 dark:text-slate-200">
+                                    Akademik & Kontak
                                 </h3>
+                            </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Kelas</label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <BookOpen size={18} className="text-gray-400" />
+                            <div className="space-y-6">
+                                {/* Kelas & Status Row */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">Kelas Aktif</label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <BookOpen size={16} className="text-slate-400" />
+                                            </div>
+                                            <select
+                                                className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-slate-800 dark:text-slate-200 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none cursor-pointer"
+                                                value={data.kelas}
+                                                onChange={(e) => setData('kelas', e.target.value)}
+                                            >
+                                                <option value="" disabled>-- Pilih Kelas --</option>
+                                                {kelasOptions.map((k) => (
+                                                    <option key={k} value={k}>{k}</option>
+                                                ))}
+                                            </select>
                                         </div>
-                                        <select
-                                            className="w-full pl-10 border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-all"
-                                            value={data.kelas}
-                                            onChange={(e) => setData('kelas', e.target.value)}
-                                        >
-                                            <option value="">-- Pilih Kelas --</option>
-                                            {kelasOptions.map((k) => (
-                                                <option key={k} value={k}>{k}</option>
-                                            ))}
-                                        </select>
+                                        {errors.kelas && <p className="text-rose-500 text-[10px] font-bold uppercase tracking-widest mt-2">{errors.kelas}</p>}
                                     </div>
-                                    {errors.kelas && <p className="text-red-500 text-xs mt-1">{errors.kelas}</p>}
+
+                                    <div>
+                                        <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">Status Siswa</label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <CheckCircle size={16} className="text-slate-400" />
+                                            </div>
+                                            <select
+                                                className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-slate-800 dark:text-slate-200 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none cursor-pointer"
+                                                value={data.status}
+                                                onChange={(e) => setData('status', e.target.value)}
+                                            >
+                                                <option value="aktif">Aktif</option>
+                                                <option value="tidak_aktif">Tidak Aktif</option>
+                                            </select>
+                                        </div>
+                                        {errors.status && <p className="text-rose-500 text-[10px] font-bold uppercase tracking-widest mt-2">{errors.status}</p>}
+                                    </div>
                                 </div>
 
+                                {/* No HP */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">No. HP Orang Tua (WhatsApp)</label>
+                                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">No. HP Orang Tua (Wajib Aktif WA)</label>
                                     <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <Phone size={18} className="text-gray-400" />
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <Phone size={16} className="text-slate-400" />
                                         </div>
                                         <input
                                             type="text"
-                                            className="w-full pl-10 border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                            className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-700 rounded-xl text-sm font-bold font-mono text-slate-800 dark:text-slate-200 focus:ring-orange-500 focus:border-orange-500 transition-all"
                                             value={data.no_hp_ortu}
                                             onChange={(e) => setData('no_hp_ortu', e.target.value)}
-                                            placeholder="628xxxxxxxxxx"
+                                            placeholder="Contoh: 6281234567890"
                                         />
                                     </div>
-                                    {errors.no_hp_ortu && <p className="text-red-500 text-xs mt-1">{errors.no_hp_ortu}</p>}
+                                    <p className="text-slate-400 dark:text-zinc-500 text-[10px] font-bold italic mt-2">* Awali dengan 62, sistem membutuhkannya untuk API Fonnte.</p>
+                                    {errors.no_hp_ortu && <p className="text-rose-500 text-[10px] font-bold uppercase tracking-widest mt-1">{errors.no_hp_ortu}</p>}
                                 </div>
 
+                                {/* Alamat */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Status Siswa</label>
+                                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">Alamat Lengkap</label>
                                     <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <CheckCircle size={18} className="text-gray-400" />
+                                        <div className="absolute top-4 left-4 pointer-events-none">
+                                            <MapPin size={16} className="text-slate-400" />
                                         </div>
-                                        <select
-                                            className="w-full pl-10 border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-all"
-                                            value={data.status}
-                                            onChange={(e) => setData('status', e.target.value)}
-                                        >
-                                            <option value="aktif">Aktif</option>
-                                            <option value="tidak_aktif">Tidak Aktif</option>
-                                        </select>
+                                        <textarea
+                                            className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-slate-800 dark:text-slate-200 focus:ring-orange-500 focus:border-orange-500 transition-all min-h-[120px]"
+                                            value={data.alamat}
+                                            onChange={(e) => setData('alamat', e.target.value)}
+                                            placeholder="Detail alamat domisili..."
+                                        />
                                     </div>
-                                    {errors.status && <p className="text-red-500 text-xs mt-1">{errors.status}</p>}
+                                    {errors.alamat && <p className="text-rose-500 text-[10px] font-bold uppercase tracking-widest mt-2">{errors.alamat}</p>}
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        {/* Alamat Full Width */}
-                        <div className="mt-6">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Alamat Lengkap</label>
-                            <div className="relative">
-                                <div className="absolute top-3 left-3 pointer-events-none">
-                                    <MapPin size={18} className="text-gray-400" />
-                                </div>
-                                <textarea
-                                    className="w-full pl-10 border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-all h-24 pt-2"
-                                    value={data.alamat}
-                                    onChange={(e) => setData('alamat', e.target.value)}
-                                    placeholder="Jl. Nama Jalan, No. Rumah, RT/RW, Kelurahan, Kecamatan"
-                                />
-                            </div>
-                            {errors.alamat && <p className="text-red-500 text-xs mt-1">{errors.alamat}</p>}
-                        </div>
+                    {/* --- FOOTER FORM: TOMBOL SIMPAN --- */}
+                    <div className="p-8 bg-slate-50/50 dark:bg-zinc-800/20 border-t border-slate-100 dark:border-zinc-800 flex justify-end">
+                        <button
+                            type="submit"
+                            disabled={processing}
+                            className="group flex items-center gap-3 px-8 py-4 bg-[#F53003] hover:bg-orange-700 text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-orange-200 dark:shadow-none transition-all hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        >
+                            {processing ? (
+                                <span className="animate-pulse flex items-center gap-2">Memproses Data...</span>
+                            ) : (
+                                <>
+                                    <Save size={18} className="transition-transform group-hover:-translate-y-0.5" />
+                                    Simpan Data Siswa
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </form>
 
-                        {/* Tombol Aksi */}
-                        <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-100">
-                            <Link
-                                href={route('admin.siswa.index')}
-                                className="px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 flex items-center gap-2 transition-all"
-                            >
-                                <X size={18} />
-                                Batal
-                            </Link>
-                            <button
-                                type="submit"
-                                disabled={processing}
-                                className="px-5 py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 shadow-lg shadow-blue-500/30 flex items-center gap-2 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
-                            >
-                                {processing ? (
-                                    <span className="animate-pulse">Menyimpan...</span>
-                                ) : (
-                                    <>
-                                        <Save size={18} />
-                                        Simpan Data
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    </form>
-                </div>
             </div>
         </AppLayout>
     );

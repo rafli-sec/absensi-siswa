@@ -1,14 +1,18 @@
-import AppLogoIcon from './app-logo-icon';
-
 export default function AppLogo() {
     return (
         <>
-            <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-                <AppLogoIcon className="size-5 fill-current text-white dark:text-black" />
+            {/* Hapus bg-sidebar-primary jika gambar logo Anda sudah memiliki warna/background sendiri */}
+            <div className="flex aspect-square size-8 items-center justify-center overflow-hidden rounded-md">
+                <img 
+                    src="/apple-touch-icon.png" 
+                    alt="Logo SMP 51 Makassar" 
+                    className="h-full w-full object-contain"
+                />
             </div>
-            <div className="ml-1 grid flex-1 text-left text-sm">
-                <span className="mb-0.5 truncate leading-tight font-semibold">
-                    Laravel Starter Kit
+            
+            <div className="ml-2 grid flex-1 text-left text-sm">
+                <span className="mb-0.5 truncate leading-tight font-bold text-slate-800 dark:text-white">
+                    SMP 51 MAKASSAR
                 </span>
             </div>
         </>
