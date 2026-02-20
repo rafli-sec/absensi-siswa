@@ -5,23 +5,19 @@ namespace App\Http\Controllers\Guru;
 use App\Http\Controllers\Controller;
 use App\Models\Absensi;
 use App\Models\Siswa;
+use App\Models\LogWhatsapp;
+use App\Jobs\SendWaAbsensi;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
 
-/**
- * @property \App\Models\User $user
- */
 class AbsensiController extends Controller
 {
     public function index(Request $request)
     {
-        /** @var \App\Models\User $user */
         $user = auth()->user();
-        
         $tanggal = $request->input('tanggal', now()->format('Y-m-d'));
         $idGuru = $user->guru->id_guru ?? null;
 
@@ -79,7 +75,6 @@ class AbsensiController extends Controller
                         'id_siswa' => $siswa->id_siswa,
                         'nis' => $siswa->nis,
                         'nama_siswa' => $siswa->nama_siswa,
-                        'jenis_kelamin' => $siswa->jenis_kelamin,
                         'status_kehadiran' => $siswa->absensi->first()->status_kehadiran ?? 'hadir', 
                     ];
                 });
@@ -96,14 +91,6 @@ class AbsensiController extends Controller
             'kelasOptions' => ['7A', '7B', '7C', '8A', '8B', '8C', '9A'],
         ]);
     }
-
-    /**
-     * STORE: Simpan Absensi & LANGSUNG KIRIM WA
-     */
-    // ... imports sama seperti sebelumnya ...
- 
-
-// ... method index dan create sama ...
 
     public function store(Request $request)
     {
@@ -122,13 +109,11 @@ class AbsensiController extends Controller
         $idGuru = $user->guru->id_guru ?? null;
         if (!$idGuru) return redirect()->back()->with('error', 'Profil Guru tidak ditemukan.');
 
-        $tokenFonnte = env('TOKEN_FONNTE'); 
-
         DB::beginTransaction();
 
         try {
             foreach ($request->absensi as $item) {
-                // 1. SIMPAN KE DATABASE (Tetap simpan semua status, termasuk Hadir)
+                // 1. Simpan atau Update Absensi ke Database [cite: 4]
                 $absensi = Absensi::updateOrCreate(
                     [
                         'id_siswa' => $item['id_siswa'],
@@ -143,58 +128,46 @@ class AbsensiController extends Controller
                     ]
                 );
 
-                // 2. FILTER PENGIRIMAN WA (STRATEGI ANTI-BANNED)
-                // Hanya kirim jika status BUKAN 'hadir'. 
-                // Jika hadir, skip WA. Ini menghemat kuota dan mencegah spam.
-                if ($item['status_kehadiran'] !== 'hadir') {
-                    
-                    $siswa = Siswa::find($item['id_siswa']);
+                // 2. Kirim Notifikasi via Queue untuk SEMUA status kehadiran 
+                $siswa = Siswa::find($item['id_siswa']);
 
-                    if ($siswa && !empty($siswa->no_hp_ortu)) {
-                        
-                        $emoji = match($item['status_kehadiran']) {
-                            'sakit' => '💊',
-                            'izin'  => '📝',
-                            'alpha' => '❌', // Merah untuk alpha
-                            default => 'ℹ️'
-                        };
+                if ($siswa && !empty($siswa->no_hp_ortu)) {
+                    $emoji = match($item['status_kehadiran']) {
+                        'hadir' => '✅',
+                        'sakit' => '💊',
+                        'izin'  => '📝',
+                        'alpha' => '❌',
+                        default => 'ℹ️'
+                    };
 
-                        // Buat pesan sedikit variatif (tambahkan jam input) agar tidak terdeteksi spam persis
-                        $waktu = now()->format('H:i:s');
-                        $pesan = "*PEMBERITAHUAN SEKOLAH*\n\n" .
-                                 "Yth. Wali Murid,\n" .
-                                 "Siswa a.n: *{$siswa->nama_siswa}*\n" .
-                                 "Kelas: {$request->kelas}\n" .
-                                 "Status Hari Ini: *".strtoupper($item['status_kehadiran'])."* {$emoji}\n\n" .
-                                 "Mohon konfirmasinya jika ada kesalahan.\n" .
-                                 "_Waktu lapor: {$waktu}_";
+                    $pesan = "*PEMBERITAHUAN ABSENSI SEKOLAH*\n\n" .
+                             "Yth. Wali Murid,\n" .
+                             "Siswa a.n: *{$siswa->nama_siswa}*\n" .
+                             "Kelas: {$request->kelas}\n" .
+                             "Mata Pelajaran: {$request->mapel}\n" .
+                             "Jam Ke: {$request->jam_ke}\n" .
+                             "Status Kehadiran: *".strtoupper($item['status_kehadiran'])."* {$emoji}\n\n" .
+                             "Terima kasih atas perhatiannya.";
 
-                        try {
-                            $response = Http::withHeaders([
-                                'Authorization' => $tokenFonnte,
-                            ])->post('https://api.fonnte.com/send', [
-                                'target' => $siswa->no_hp_ortu,
-                                'message' => $pesan,
-                                // 'delay' => '2', // Fonnte punya fitur delay bawaan, bisa dimanfaatkan
-                            ]);
+                    // Simpan Log ke database 
+                    $log = LogWhatsapp::create([
+                        'id_absensi' => $absensi->id_absensi,
+                        'no_tujuan' => $siswa->no_hp_ortu,
+                        'pesan' => $pesan,
+                        'status_kirim' => 'pending',
+                    ]);
 
-                        } catch (\Exception $waError) {
-                            // Silent fail agar absensi tetap tersimpan
-                        }
-                        
-                        // JEDA RANDOM (PENTING)
-                        // Jeda antara 2 sampai 5 detik agar tidak terlihat seperti robot
-                        sleep(rand(2, 5)); 
-                    }
+                    // Lempar ke Antrean (Queue) 
+                    SendWaAbsensi::dispatch($log);
                 }
             }
 
             DB::commit();
-            return redirect()->route('guru.absensi.index')->with('success', 'Absensi disimpan. Notifikasi dikirim hanya kepada siswa yang TIDAK HADIR.');
+            return redirect()->route('guru.absensi.index')->with('success', 'Absensi berhasil disimpan. Seluruh notifikasi sedang dikirim melalui antrean sistem.');
 
         } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->back()->with('error', 'Gagal: ' . $e->getMessage());
+            DB::rollback();
+            return redirect()->back()->with('error', 'Gagal menyimpan absensi: ' . $e->getMessage());
         }
     }
 
@@ -227,6 +200,52 @@ class AbsensiController extends Controller
             'tanggal' => $tanggal,
             'mapel' => $mapel,
             'jam_ke' => $jam_ke
+        ]);
+    }
+    public function show(Request $request, $kelas, $tanggal)
+    {
+        $mapel = $request->query('mapel');
+        $jam_ke = $request->query('jam_ke');
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $idGuru = $user->guru->id_guru ?? null;
+
+        // Ambil data siswa di kelas tersebut beserta relasi absensi dan log whatsapp-nya
+        $detailAbsensi = Siswa::where('kelas', $kelas)
+            ->where('status', 'aktif')
+            ->orderBy('nama_siswa')
+            ->with(['absensi' => function ($query) use ($tanggal, $mapel, $jam_ke, $idGuru) {
+                $query->where('tanggal', $tanggal)
+                      ->where('mapel', $mapel)
+                      ->where('jam_ke', $jam_ke)
+                      ->where('id_guru', $idGuru) // Pastikan hanya data milik guru ini
+                      ->with('logWhatsapp'); // Ambil juga status pengiriman WA
+            }])
+            ->get()
+            ->map(function ($siswa) {
+                $absen = $siswa->absensi->first();
+                return [
+                    'nis' => $siswa->nis,
+                    'nama_siswa' => $siswa->nama_siswa,
+                    'no_hp_ortu' => $siswa->no_hp_ortu,
+                    'status_kehadiran' => $absen ? $absen->status_kehadiran : 'Belum Diabsen',
+                    'waktu_input' => $absen ? $absen->waktu_input : '-',
+                    // Cek status WA, jika hadir tidak ada WA yang dikirim
+                    'status_wa' => $absen && $absen->logWhatsapp 
+                                    ? $absen->logWhatsapp->status_kirim 
+                                    : ($absen && $absen->status_kehadiran == 'hadir' ? 'Tidak Perlu WA' : 'N/A')
+                ];
+            });
+
+        return Inertia::render('guru/absensi/show', [
+            'detailAbsensi' => $detailAbsensi,
+            'infoSesi' => [
+                'kelas' => $kelas,
+                'tanggal' => $tanggal,
+                'mapel' => $mapel,
+                'jam_ke' => $jam_ke
+            ]
         ]);
     }
 }

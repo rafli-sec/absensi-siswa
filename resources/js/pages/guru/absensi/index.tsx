@@ -1,7 +1,8 @@
 import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { BreadcrumbItem } from '@/types';
-import { Pencil, Trash2, Plus, Calendar, Users, CheckCircle, XCircle, BookOpen, Clock } from 'lucide-react';
+// Tambahkan ArrowRight di import ini
+import { Pencil, Trash2, Plus, Calendar, Users, CheckCircle, XCircle, BookOpen, Clock, ArrowRight } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/guru/dashboard' },
@@ -117,7 +118,19 @@ export default function index({ rekapAbsensi = [], filters }: any) {
                                                 </div>
                                             </td>
                                             <td className="p-4">
-                                                <div className="flex justify-center gap-2">
+                                                <div className="flex items-center justify-center gap-2">
+                                                     <Link 
+                                                        href={route('guru.absensi.show', { 
+                                                            kelas: rekap.kelas, 
+                                                            tanggal: rekap.tanggal,
+                                                            mapel: rekap.mapel,
+                                                            jam_ke: rekap.jam_ke
+                                                        })}
+                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-colors border border-blue-100 hover:border-blue-600 shadow-sm"
+                                                        title="Lihat Rincian Kehadiran Siswa"
+                                                    >
+                                                        Detail <ArrowRight size={12} />
+                                                    </Link>
                                                     <Link
                                                         href={route('guru.absensi.edit', { 
                                                             kelas: rekap.kelas, 
@@ -137,6 +150,12 @@ export default function index({ rekapAbsensi = [], filters }: any) {
                                                     >
                                                         <Trash2 size={18} />
                                                     </button>
+
+                                
+                                                   
+
+                                                   
+                                                    
                                                 </div>
                                             </td>
                                         </tr>

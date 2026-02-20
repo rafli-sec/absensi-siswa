@@ -145,7 +145,7 @@ export default function Create() {
                                             className="w-full pl-10 border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-all"
                                             value={data.no_hp_ortu}
                                             onChange={(e) => setData('no_hp_ortu', e.target.value)}
-                                            placeholder="08xxxxxxxxxx"
+                                            placeholder="628xxxxxxxxxx"
                                         />
                                     </div>
                                     {errors.no_hp_ortu && <p className="text-red-500 text-xs mt-1">{errors.no_hp_ortu}</p>}

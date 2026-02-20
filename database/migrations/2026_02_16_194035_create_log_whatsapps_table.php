@@ -14,7 +14,7 @@ return new class extends Migration {
 
             $table->string('no_tujuan', 15);
             $table->text('pesan');
-            $table->enum('status_kirim', ['berhasil', 'gagal']);
+            $table->enum('status_kirim', ['berhasil', 'gagal', 'pending']);
             $table->dateTime('waktu_kirim');
 
             $table->timestamps();

@@ -24,18 +24,19 @@ class Absensi extends Model
 
     public function siswa()
     {
-        // Tambahkan 'id_siswa' sebagai parameter ketiga (owner key)
+       
         return $this->belongsTo(Siswa::class, 'id_siswa', 'id_siswa');
     }
 
     public function guru()
     {
-        // Tambahkan 'id_guru' sebagai parameter ketiga (owner key)
+        
         return $this->belongsTo(Guru::class, 'id_guru', 'id_guru');
     }
 
-    public function logWhatsapps()
+    public function logWhatsapp()
     {
-        return $this->hasMany(LogWhatsapp::class, 'id_absensi', 'id_absensi');
+        
+        return $this->hasOne(LogWhatsapp::class, 'id_absensi', 'id_absensi');
     }
 }

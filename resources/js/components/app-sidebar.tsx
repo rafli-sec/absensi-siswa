@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react'; // Tambah usePage
-import { BookOpen, Folder, LayoutGrid, Users, ClipboardCheck } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Users, ClipboardCheck, PhoneCall, MessageCircleCodeIcon } from 'lucide-react';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -45,6 +45,11 @@ export function AppSidebar() {
             href: '/guru/absensi',
             icon: ClipboardCheck,
             role: 'guru', 
+        },
+        {
+            title: 'Log WhatsApp',
+            href: '/whatsapp-monitoring', 
+            icon: MessageCircleCodeIcon,
         },
     ];
 

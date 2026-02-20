@@ -1,174 +1,215 @@
-# Rangkuman Migrasi Database & Route
+# Rangkuman Project Absensi Sekolah + WhatsApp Notification
 
-Dokumen ini berisi rangkuman migration dan route yang ada di proyek ini.
+## Cara Install & Menjalankan Project
 
-## Daftar Migration
+### 1. Clone & Install Dependencies
 
-### 1. 0001_01_01_000000_create_users_table.php
-- **Tabel**: `users`
-- **Deskripsi**: Membuat tabel users untuk autentikasi
-- **Kolom**:
-  - `id` (bigIncrements)
-  - `name` (string)
-  - `email` (string, unique)
-  - `email_verified_at` (timestamp, nullable)
-  - `password` (string)
-  - `role` (enum: 'admin', 'guru', default: 'guru')
-  - `remember_token` (string)
-  - `timestamps`
+```
+bash
+# Clone project
+git clone <repository-url> munarah-skripsi
+cd munarah-skripsi
 
-- **Tabel**: `password_reset_tokens`
-  - `email` (string, primary)
-  - `token` (string)
-  - `created_at` (timestamp, nullable)
+# Install PHP dependencies
+composer install
 
-- **Tabel**: `sessions`
-  - `id` (string, primary)
-  - `user_id` (foreignId, nullable)
-  - `ip_address` (string, 45)
-  - `user_agent` (text, nullable)
-  - `payload` (longText)
-  - `last_activity` (integer)
+# Install Node.js dependencies
+npm install
 
----
+# Copy .env file
+cp .env.example .env
+```
 
-### 2. 2026_02_16_193955_create_gurus_table.php
-- **Tabel**: `gurus`
-- **Deskripsi**: Membuat tabel untuk data guru
-- **Kolom**:
-  - `id_guru` (bigIncrements)
-  - `nip` (string, 30, unique)
-  - `nama_guru` (string, 100)
-  - `mapel` (string, 50)
-  - `timestamps`
+### 2. Setup Database
 
----
+```
+bash
+# Generate application key
+php artisan key:generate
 
-### 3. 2026_02_16_193959_create_siswas_table.php
-- **Tabel**: `siswas`
-- **Deskripsi**: Membuat tabel untuk data siswa
-- **Kolom**:
-  - `id_siswa` (bigIncrements)
-  - `nis` (string, 20, unique)
-  - `nama_siswa` (string, 100)
-  - `kelas` (string, 20)
-  - `no_hp_ortu` (string, 15)
-  - `status` (enum: 'aktif', 'tidak_aktif', default: 'aktif')
-  - `timestamps`
+# Setup database (pastikan sudah buat database di MySQL/XAMPP)
+# Edit file .env sesuai konfigurasi database Anda:
+# DB_DATABASE=munarah_skripsi
+# DB_USERNAME=root
+# DB_PASSWORD=
 
----
+# Jalankan migration
+php artisan migrate
 
-### 4. 2026_02_16_194003_create_absensis_table.php
-- **Tabel**: `absensis`
-- **Deskripsi**: Membuat tabel untuk data absensi siswa
-- **Kolom**:
-  - `id_absensi` (bigIncrements)
-  - `id_siswa` (unsignedBigInteger, foreignKey -> siswas.id_siswa)
-  - `id_guru` (unsignedBigInteger, foreignKey -> gurus.id_guru)
-  - `mapel` (string, 50, nullable)
-  - `jam_ke` (integer, default: 1)
-  - `tanggal` (date)
-  - `status_kehadiran` (enum: 'hadir', 'izin', 'sakit', 'alpha')
-  - `waktu_input` (time)
-  - `timestamps`
+# Seed data (opsional - untuk testing)
+php artisan db:seed
+```
 
-- **Relasi**:
-  - `id_siswa` -> `siswas.id_siswa` (cascadeOnDelete)
-  - `id_guru` -> `gurus.id_guru` (cascadeOnDelete)
+### 3. Konfigurasi WhatsApp (Fonnte)
 
-- **Index**:
-  - `tanggal`, `id_guru`, `mapel` (untuk mempercepat pencarian rekap)
+Buka file `.env` dan tambahkan:
+
+```
+env
+TOKEN_FONNTE=your_fonnte_token_here
+```
+
+**Cara mendapatkan token Fonnte:**
+1. Daftar di https://fonnte.com
+2. Login dan masuk ke dashboard
+3. Ambil API Token dari pengaturan
+
+### 4. Menjalankan Aplikasi
+
+```
+bash
+# Terminal 1: Jalankan queue worker (WAJIB untuk Kirim WhatsApp)
+php artisan queue:work
+
+# Terminal 2: Jalankan development server
+npm run dev
+# atau
+php artisan serve
+```
+
+Buka browser: http://localhost:8000
 
 ---
 
-### 5. 2026_02_16_194035_create_log_whatsapps_table.php
-- **Tabel**: `log_whatsapps`
-- **Deskripsi**: Membuat tabel untuk log pengiriman WhatsApp
-- **Kolom**:
-  - `id_log` (bigIncrements)
-  - `id_absensi` (unsignedBigInteger, foreignKey -> absensis.id_absensi)
-  - `no_tujuan` (string, 15)
-  - `pesan` (text)
-  - `status_kirim` (enum: 'berhasil', 'gagal', 'pending')
-  - `waktu_kirim` (dateTime)
-  - `timestamps`
+## Cara Penggunaan Fitur WhatsApp Notification
 
-- **Relasi**:
-  - `id_absensi` -> `absensis.id_absensi` (cascadeOnDelete)
+### Login Akun
 
----
+```
+Admin: admin@smp51.sch.id / password
+Guru:  guru@smp51.sch.id / password
+```
 
-## Route & Controller
+### 1. Setup Data Siswa
 
-### Web Routes (routes/web.php)
+Pastikan siswa memiliki nomor HP orang tua/wali:
+- Login sebagai Admin
+- Buka menu Siswa
+- Tambah/Edit siswa dengan mengisi kolom "No. HP Orang Tua"
 
-#### Public & Dashboard
-| Method | Endpoint | Controller | Fungsi |
-|--------|----------|------------|-------|
-| GET | `/` | - | Halaman welcome |
-| GET | `/dashboard` | - | Redirect ke dashboard berdasarkan role (admin → /admin/dashboard, guru → /guru/dashboard) |
-| GET | `/admin/dashboard` | - | Dashboard admin (middleware: auth, verified, admin) |
-| GET | `/guru/dashboard` | - | Dashboard guru (middleware: auth, verified, guru) |
+### 2. Input Absensi
 
-#### Admin - Guru Management
-| Method | Endpoint | Controller | Fungsi |
-|--------|----------|------------|-------|
-| GET | `/admin/guru` | `GuruController@index` | List data guru (Inertia) |
-| GET | `/admin/guru/create` | `GuruController@create` | Form tambah guru |
-| POST | `/admin/guru` | `GuruController@store` | Simpan data guru |
-| GET | `/admin/guru/{id}` | `GuruController@show` | Detail data guru |
-| GET | `/admin/guru/{id}/edit` | `GuruController@edit` | Form edit guru |
-| PUT | `/admin/guru/{id}` | `GuruController@update` | Update data guru |
-| DELETE | `/admin/guru/{id}` | `GuruController@destroy` | Hapus data guru |
+1. Login sebagai Guru
+2. Buka menu Absensi Siswa
+3. Pilih Kelas, Mata Pelajaran, Jam Ke, Tanggal
+4. Daftar siswa akan muncul
+5. Ubah status kehadiran:
+   - **Hadir** = Tidak dikirimkan WhatsApp
+   - **Izin/Sakit/Alpha** = Akan dikirimkan WhatsApp ke orang tua
 
-#### Admin - Siswa Management
-| Method | Endpoint | Controller | Fungsi |
-|--------|----------|------------|-------|
-| GET | `/admin/siswa` | `SiswaController@index` | List data siswa |
-| GET | `/admin/siswa/create` | `SiswaController@create` | Form tambah siswa |
-| POST | `/admin/siswa` | `SiswaController@store` | Simpan data siswa |
-| GET | `/admin/siswa/{id}/edit` | `SiswaController@edit` | Form edit siswa |
-| PUT | `/admin/siswa/{id}` | `SiswaController@update` | Update data siswa |
-| DELETE | `/admin/siswa/{id}` | `SiswaController@destroy` | Hapus data siswa |
+6. Klik "Simpan Absensi"
 
-#### Guru - Absensi Management
-| Method | Endpoint | Controller | Fungsi |
-|--------|----------|------------|-------|
-| GET | `/guru/absensi` | `AbsensiController@index` | Riwayat absensi berdasarkan guru yang login |
-| GET | `/guru/absensi/create` | `AbsensiController@create` | Form input absensi (pilih kelas, tanggal, mapel, jam ke) |
-| POST | `/guru/absensi` | `AbsensiController@store` | Simpan absensi & antrekan WhatsApp otomatis |
-| GET | `/guru/absensi/edit/{kelas}/{tanggal}` | `AbsensiController@edit` | Form edit absensi (ubah kehadiran siswa) |
+### 3. Cara Kerja WhatsApp Notification
 
-### Settings Routes (routes/settings.php)
+```
+Absensi Disimpan (Status: izin/sakit/alpha)
+           ↓
+Simpan ke tabel log_whatsapps (status: pending)
+           ↓
+Dispatch Job ke Queue
+           ↓
+Queue Worker memproses (php artisan queue:work)
+           ↓
+Kirim via API Fonnte
+           ↓
+Update status: berhasil / gagal
+```
 
-| Method | Endpoint | Controller | Fungsi |
-|--------|----------|------------|-------|
-| GET | `/settings/profile` | `ProfileController@edit` | Edit profil |
-| PATCH | `/settings/profile` | `ProfileController@update` | Update profil |
-| DELETE | `/settings/profile` | `ProfileController@destroy` | Hapus profil (middleware: auth, verified) |
-| GET | `/settings/password` | `PasswordController@edit` | Edit password |
-| PUT | `/settings/password` | `PasswordController@update` | Update password |
-| GET | `/settings/appearance` | - | Tampilan appearance |
-| GET | `/settings/two-factor` | `TwoFactorAuthenticationController@show` | Two-factor auth |
+### 4. Monitoring Kirim WhatsApp
+
+Cek status pengiriman di database:
+
+```
+bash
+php artisan tinker
+# Ketik:
+App\Models\LogWhatsapp::latest()->get()
+```
+
+Atau cek melalui halaman admin (jika sudah di-setup).
 
 ---
 
-## Fitur Tambahan
+## Cara Testing WhatsApp
 
-### WhatsApp Notification (SendWaAbsensi Job)
-- **File**: `app/Jobs/SendWaAbsensi.php`
-- **Trigger**: Ketika siswa TIDAK HADIR (status: izin, sakit, alpha)
-- **Proses**:
-  1. Saat absensi disimpan, jika siswa tidak hadir, data masuk ke tabel `log_whatsapps` dengan status 'pending'
-  2. Job `SendWaAbsensi` dikirim ke queue
-  3. Job mengeksekusi HTTP POST ke API Fonnte untuk mengirim WhatsApp
-  4. Setelah dikirim, status diupdate menjadi 'berhasil' atau 'gagal'
-  5. Ada jeda 5 detik antar job untuk menghindari rate limit
-- **Pesan**: Otomatisformat: "Pemberitahuan: Siswa *{nama_siswa}* tercatat *{status}* pada Mapel {mapel} (Jam ke-{jam_ke})."
+### Test Langsung (tanpa absensi)
+
+```
+bash
+# Jalankan command test
+php artisan test:wa-job "6282271615967" "Nama Siswa Test"
+
+# Di terminal lain, pastikan queue worker berjalan:
+php artisan queue:work
+```
+
+### Test Kirim dari Aplikasi
+
+1. Login sebagai Guru
+2. Buat absensi dengan status selain "hadir"
+3. Pastikan queue worker sedang berjalan
+4. Pesan WhatsApp akan otomatis terkirim
 
 ---
 
-## Diagram Relasi
+## Troubleshooting
+
+### WhatsApp tidak terkirim?
+
+1. **Cek Queue Worker**
+   
+```
+bash
+   php artisan queue:work
+   
+```
+   Pastikan selalu berjalan saat mengirim absensi
+
+2. **Cek Token Fonnte**
+   - Login di fonnte.com
+   - Cek apakah token masih aktif
+   - Cek saldo Kuota WhatsApp
+
+3. **Cek Log Error**
+   
+```
+bash
+   php artisan queue:failed
+   
+```
+
+4. **Cek Database**
+   
+```
+bash
+   php artisan tinker
+   App\Models\LogWhatsapp::latest()->get()
+   
+```
+   Lihat kolom `status_kirim` - harusnya "berhasil"
+
+### Error: "Profil Guru tidak ditemukan"
+
+Pastikan user guru sudah memiliki data di tabel `gurus`. Hubungkan dengan cara:
+```
+bash
+php artisan tinker
+// Buat relasi user dengan guru
+```
+
+---
+
+## Struktur Database
+
+### Tabel Penting
+
+1. **users** - Akun login (role: admin/guru)
+2. **gurus** - Data guru
+3. **siswas** - Data siswa (termasuk no_hp_ortu)
+4. **absensis** - Data absensi siswa
+5. **log_whatsapps** - Log pengiriman WhatsApp
+
+### Relasi
 
 ```
 users (otentikasi)
@@ -182,13 +223,29 @@ gurus ──────► absensis ◄────── siswas
 
 ---
 
-## Catatan
+## Catatan Penting
 
-- Primary key menggunakan `bigIncrements` dengan nama kustom (`id_guru`, `id_siswa`, `id_absensi`, `id_log`)
-- Semua relasi menggunakan `cascadeOnDelete`
-- Status kehadiran: hadir, izin, sakit, alpha
-- Status siswa: aktif, tidak_aktif
-- Role user: admin, guru
-- Dua controller guru: `App\Http\Controllers\Admin\GuruController` (Inertia) dan `App\Http\Controllers\Api\Admin\GuruController` (API)
-- Absensi memiliki kolom `mapel` dan `jam_ke` untuk informasi pelajaran dan jam ke-
-- Notifikasi WhatsApp otomatis dikirim ke orang tua/wali siswa ketika siswa tidak hadir
+1. **Queue Worker WAJIB Running** - Tanpa ini, WhatsApp tidak akan terkirim
+2. **Nomor HP format** - Gunakan format: 6281234567890 (dengan 62)
+3. **Jeda Pengiriman** - Ada jeda 5 detik antar pesan untuk menghindari spam
+4. **Status Tidak Dikirim** - Pesan hanya dikirim jika status kehadiran bukan "hadir"
+
+---
+
+## Command Berguna
+
+```
+bash
+# Clear cache
+php artisan cache:clear
+php artisan config:clear
+php artisan route:clear
+
+# Jalankan queue worker
+php artisan queue:work
+
+# Lihat failed jobs
+php artisan queue:failed
+
+# Retry failed jobs
+php artisan queue:retry all
