@@ -48,6 +48,8 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::get('/guru/{id}/edit', [GuruController::class, 'edit'])->name('guru.edit'); 
     Route::put('/guru/{id}', [GuruController::class, 'update'])->name('guru.update');
     Route::delete('/guru/{id}', [GuruController::class, 'destroy'])->name('guru.destroy');
+    
+    // Route Show (Paling bawah atau setelah create)
     Route::get('/guru/{id}', [GuruController::class, 'show'])->name('guru.show');
 });
 

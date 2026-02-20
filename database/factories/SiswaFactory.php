@@ -15,7 +15,7 @@ class SiswaFactory extends Factory
             'nama_siswa' => $this->faker->name(),
             
             // Kelas acak
-            'kelas' => $this->faker->randomElement(['7A', '7B', '8A', '8B', '9A', '9B']), 
+            'kelas' => $this->faker->randomElement(['7A', '7B','7C', '8A', '8B','8C', '9A',]), 
             
             // PENTING: Harus 'laki-laki' atau 'perempuan' (Sesuai Gambar DB)
             'jenis_kelamin' => $this->faker->randomElement(['laki-laki', 'perempuan']), 

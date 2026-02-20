@@ -18,6 +18,8 @@ class Absensi extends Model
         'tanggal',
         'status_kehadiran',
         'waktu_input',
+        'mapel',
+        'jam_ke',
     ];
 
     public function siswa()
