@@ -37,7 +37,22 @@ Route::middleware(['auth', 'verified', 'guru'])->group(function () {
         return Inertia::render('guru/dashboard');
     });
 });
+use Illuminate\Support\Facades\Http;
 
+// Link akses: localhost:8000/guru/test-wa
+Route::get('/guru/test-wa', function () {
+    $target = '082271615967'; 
+    $token = env('TOKEN_FONNTE');
+
+    $response = Http::withHeaders([
+        'Authorization' => $token,
+    ])->post('https://api.fonnte.com/send', [
+        'target' => $target,
+        'message' => "Tes Fonnte SIKAPDIK: Koneksi Berhasil! 🚀",
+    ]);
+
+    return $response->json();
+})->middleware(['auth']);
 
 
 

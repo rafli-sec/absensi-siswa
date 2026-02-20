@@ -16,9 +16,9 @@ return new class extends Migration
             $table->unsignedBigInteger('id_siswa');
             $table->unsignedBigInteger('id_guru');
             
-            // Kolom Tambahan untuk fleksibilitas guru mengajar double mapel/jam
-            $table->string('mapel', 50)->nullable(); // Menyimpan nama mata pelajaran
-            $table->integer('jam_ke')->default(1);   // Menyimpan sesi jam pelajaran (1, 2, dst)
+           
+            $table->string('mapel', 50)->nullable(); 
+            $table->integer('jam_ke')->default(1);   
             
             $table->date('tanggal');
             $table->enum('status_kehadiran', ['hadir', 'izin', 'sakit', 'alpha']);
@@ -36,7 +36,7 @@ return new class extends Migration
                   ->on('gurus')
                   ->cascadeOnDelete();
                   
-            // Index opsional untuk mempercepat pencarian rekap
+            // Index  untuk mempercepat pencarian rekap
             $table->index(['tanggal', 'id_guru', 'mapel']);
         });
     }
