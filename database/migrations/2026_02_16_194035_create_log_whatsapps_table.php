@@ -9,16 +9,12 @@ return new class extends Migration {
     {
         Schema::create('log_whatsapps', function (Blueprint $table) {
             $table->bigIncrements('id_log');
-
             $table->unsignedBigInteger('id_absensi');
-
             $table->string('no_tujuan', 15);
             $table->text('pesan');
             $table->enum('status_kirim', ['berhasil', 'gagal', 'pending']);
-            $table->dateTime('waktu_kirim');
-
+            $table->dateTime('waktu_kirim')->nullable(); 
             $table->timestamps();
-
             $table->foreign('id_absensi')
                   ->references('id_absensi')
                   ->on('absensis')

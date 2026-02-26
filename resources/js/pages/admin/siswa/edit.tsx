@@ -21,6 +21,7 @@ export default function Edit({ siswa }: { siswa: any }) {
         jenis_kelamin: siswa.jenis_kelamin || 'laki-laki',
         alamat: siswa.alamat || '',
         no_hp_ortu: siswa.no_hp_ortu,
+        nama_ortu: siswa.nama_ortu || '', // Menambahkan field nama_ortu dari database
         status: siswa.status,
     });
 
@@ -200,6 +201,25 @@ export default function Edit({ siswa }: { siswa: any }) {
                                     </div>
                                     <p className="text-slate-400 dark:text-zinc-500 text-[10px] font-bold italic mt-2">* Awali dengan 62, sistem membutuhkannya untuk API Fonnte.</p>
                                     {errors.no_hp_ortu && <p className="text-rose-500 text-[10px] font-bold uppercase tracking-widest mt-1">{errors.no_hp_ortu}</p>}
+                                </div>
+
+                                {/* Nama Orang Tua */}
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">Nama Orang Tua/Wali</label>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <Users size={16} className="text-slate-400" /> 
+                                        </div>
+                                        <input
+                                            type="text"
+                                            className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-slate-800 dark:text-slate-200 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                                            value={data.nama_ortu}
+                                            onChange={(e) => setData('nama_ortu', e.target.value)}
+                                            placeholder="Contoh: Bapak Ahmad"
+                                        />
+                                    </div>
+                                    {/* Memastikan error yang dipanggil adalah nama_ortu */}
+                                    {errors.nama_ortu && <p className="text-rose-500 text-[10px] font-bold uppercase tracking-widest mt-1">{errors.nama_ortu}</p>}
                                 </div>
 
                                 {/* Alamat */}

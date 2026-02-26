@@ -21,6 +21,7 @@ export default function Create() {
         jenis_kelamin: 'laki-laki',
         alamat: '',
         no_hp_ortu: '',
+        nama_ortu: '',
         status: 'aktif',
     });
 
@@ -85,7 +86,6 @@ export default function Create() {
                                             className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-slate-800 dark:text-slate-200 focus:ring-orange-500 focus:border-orange-500 transition-all"
                                             value={data.nis}
                                             onChange={(e) => setData('nis', e.target.value)}
-                                            placeholder="Masukkan NIS..."
                                         />
                                     </div>
                                     {errors.nis && <p className="text-rose-500 text-[10px] font-bold uppercase tracking-widest mt-2">{errors.nis}</p>}
@@ -127,22 +127,6 @@ export default function Create() {
                                     </div>
                                     {errors.jenis_kelamin && <p className="text-rose-500 text-[10px] font-bold uppercase tracking-widest mt-2">{errors.jenis_kelamin}</p>}
                                 </div>
-                            </div>
-                        </div>
-
-                        {/* --- BAGIAN KANAN: AKADEMIK & KONTAK --- */}
-                        <div className="space-y-8">
-                            <div className="flex items-center gap-3 border-b border-slate-100 dark:border-zinc-800 pb-4">
-                                <div className="p-2.5 bg-orange-50 dark:bg-orange-900/20 text-[#F53003] dark:text-orange-400 rounded-xl">
-                                    <BookOpen size={20} />
-                                </div>
-                                <h3 className="text-lg font-black uppercase tracking-tighter text-slate-800 dark:text-slate-200">
-                                    Akademik & Kontak
-                                </h3>
-                            </div>
-
-                            <div className="space-y-6">
-                                {/* Kelas & Status Row */}
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">Kelas Aktif</label>
@@ -182,6 +166,23 @@ export default function Create() {
                                         {errors.status && <p className="text-rose-500 text-[10px] font-bold uppercase tracking-widest mt-2">{errors.status}</p>}
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+
+                        {/* --- BAGIAN KANAN: AKADEMIK & KONTAK --- */}
+                        <div className="space-y-8">
+                            <div className="flex items-center gap-3 border-b border-slate-100 dark:border-zinc-800 pb-4">
+                                <div className="p-2.5 bg-orange-50 dark:bg-orange-900/20 text-[#F53003] dark:text-orange-400 rounded-xl">
+                                    <BookOpen size={20} />
+                                </div>
+                                <h3 className="text-lg font-black uppercase tracking-tighter text-slate-800 dark:text-slate-200">
+                                    Akademik & Kontak
+                                </h3>
+                            </div>
+
+                            <div className="space-y-6">
+                                {/* Kelas & Status Row */}
+                                
 
                                 {/* No HP */}
                                 <div>
@@ -195,11 +196,27 @@ export default function Create() {
                                             className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-700 rounded-xl text-sm font-bold font-mono text-slate-800 dark:text-slate-200 focus:ring-orange-500 focus:border-orange-500 transition-all"
                                             value={data.no_hp_ortu}
                                             onChange={(e) => setData('no_hp_ortu', e.target.value)}
-                                            placeholder="Contoh: 6281234567890"
+                                            placeholder='628xxxxx'
                                         />
                                     </div>
                                     <p className="text-slate-400 dark:text-zinc-500 text-[10px] font-bold italic mt-2">* Awali dengan 62, sistem membutuhkannya untuk API Fonnte.</p>
                                     {errors.no_hp_ortu && <p className="text-rose-500 text-[10px] font-bold uppercase tracking-widest mt-1">{errors.no_hp_ortu}</p>}
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">Nama Orang Tua/Wali</label>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <Users size={16} className="text-slate-400" />  
+                                        </div>
+                                        <input
+                                            type="text"
+                                            className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-700 rounded-xl text-sm font-bold font-mono text-slate-800 dark:text-slate-200 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                                            value={data.nama_ortu}
+                                            onChange={(e) => setData('nama_ortu', e.target.value)}
+                                        />
+                                    </div>
+                                    <p className="text-slate-400 dark:text-zinc-500 text-[10px] font-bold italic mt-2">* Awali dengan 62, sistem membutuhkannya untuk API Fonnte.</p>
+                                    {errors.nama_ortu && <p className="text-rose-500 text-[10px] font-bold uppercase tracking-widest mt-1">{errors.no_hp_ortu}</p>}
                                 </div>
 
                                 {/* Alamat */}
@@ -213,7 +230,6 @@ export default function Create() {
                                             className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-slate-800 dark:text-slate-200 focus:ring-orange-500 focus:border-orange-500 transition-all min-h-[120px]"
                                             value={data.alamat}
                                             onChange={(e) => setData('alamat', e.target.value)}
-                                            placeholder="Detail alamat domisili..."
                                         />
                                     </div>
                                     {errors.alamat && <p className="text-rose-500 text-[10px] font-bold uppercase tracking-widest mt-2">{errors.alamat}</p>}

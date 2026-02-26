@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('nama_siswa', 100);
             $table->string('kelas', 20);
             $table->string('alamat');
+            $table->string('nama_ortu');
             $table->enum('jenis_kelamin',['laki-laki','perempuan']);
             $table->string('no_hp_ortu', 15);
             $table->enum('status', ['aktif', 'tidak_aktif'])->default('aktif');
