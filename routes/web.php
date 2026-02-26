@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\PublicController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboard;
 use App\Http\Controllers\Guru\DashboardController as GuruDashboard;
 use App\Http\Controllers\Admin\GuruController;
@@ -84,4 +85,9 @@ Route::middleware(['auth', 'verified', 'guru'])->prefix('guru')->name('guru.')->
     Route::get('/absensi/edit/{kelas}/{tanggal}', [AbsensiController::class, 'edit'])->name('absensi.edit'); 
 });
 
+
+
+// Hapus/Comment Route::get('/') bawaan Laravel, ganti dengan ini:
+Route::get('/api/siswa-by-kelas/{kelas}', [PublicController::class, 'getSiswaByKelas']);
+Route::post('/laporan-ortu', [PublicController::class, 'storeLaporan'])->name('laporan.store');
 require __DIR__.'/settings.php';
