@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboard;
 use App\Http\Controllers\Guru\DashboardController as GuruDashboard;
 use App\Http\Controllers\Admin\GuruController;
 use App\Http\Controllers\Admin\SiswaController;
+use App\Http\Controllers\Admin\LaporanController;
 use App\Http\Controllers\Admin\WhatsappLogController;
 use App\Http\Controllers\Guru\AbsensiController;
 use Illuminate\Support\Facades\Route;
@@ -68,6 +69,12 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::put('/siswa/{id}', [SiswaController::class, 'update'])->name('siswa.update');
     Route::delete('/siswa/{id}', [SiswaController::class, 'destroy'])->name('siswa.destroy');
 
+    Route::get('/laporan', [LaporanController::class, 'index'])->name('laporan.index');
+    Route::put('/laporan/{id}/status', [LaporanController::class, 'updateStatus'])->name('laporan.update-status');
+    Route::delete('/laporan/{id}', [LaporanController::class, 'destroy'])->name('laporan.destroy');
+
+
+
 });
 
 /*
@@ -83,11 +90,12 @@ Route::middleware(['auth', 'verified', 'guru'])->prefix('guru')->name('guru.')->
     Route::get('/absensi/show/{kelas}/{tanggal}', [AbsensiController::class, 'show'])->name('absensi.show'); 
     Route::delete('/absensi/{kelas}/{tanggal}', [AbsensiController::class, 'destroy'])->name('absensi.destroy');
     Route::get('/absensi/edit/{kelas}/{tanggal}', [AbsensiController::class, 'edit'])->name('absensi.edit'); 
+    
+    Route::put('/laporan/{id}/validasi', [AbsensiController::class, 'validasiLaporan'])->name('laporan.validasi');   
 });
 
 
 
-// Hapus/Comment Route::get('/') bawaan Laravel, ganti dengan ini:
 Route::get('/api/siswa-by-kelas/{kelas}', [PublicController::class, 'getSiswaByKelas']);
 Route::post('/laporan-ortu', [PublicController::class, 'storeLaporan'])->name('laporan.store');
 require __DIR__.'/settings.php';

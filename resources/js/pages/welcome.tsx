@@ -51,11 +51,10 @@ export default function Welcome({
         pesan: '',
     });
 
-    // Menampilkan notifikasi sukses
+    // Menampilkan notifikasi dari flash session (sebagai backup)
     useEffect(() => {
         if (flash?.success) {
             setShowSuccess(true);
-            reset(); // Kosongkan form setelah berhasil
             setTimeout(() => setShowSuccess(false), 5000);
         }
     }, [flash]);
@@ -80,9 +79,28 @@ export default function Welcome({
         }
     }, [data.kelas]);
 
+    // Handler Submit dengan reset & alert dinamis
     const submitLaporan: FormEventHandler = (e) => {
         e.preventDefault();
-        post(route('laporan.store'));
+        
+        post(route('laporan.store'), {
+            preserveScroll: true, // Mencegah layar scroll ke atas secara otomatis
+            onSuccess: () => {
+                // Bersihkan form
+                reset(); 
+                // Kembalikan ke nilai default
+                setData('tanggal_izin', today); 
+                setData('jenis_laporan', 'izin'); 
+                
+                // Munculkan notifikasi sukses
+                setShowSuccess(true); 
+                setTimeout(() => setShowSuccess(false), 5000);
+            },
+            onError: () => {
+                // Sembunyikan sukses jika ada error validasi
+                setShowSuccess(false);
+            }
+        });
     };
     // ==========================================
 
@@ -115,7 +133,7 @@ export default function Welcome({
                             ))}
                         </nav>
                         <div className="flex items-center gap-4">
-                            {auth.user ? (
+                            {auth?.user ? (
                                 <Link href={dashboard()} className="rounded-xl bg-slate-900 px-6 py-2.5 text-xs font-bold text-white transition-all hover:bg-black dark:bg-white dark:text-black">Dashboard</Link>
                             ) : (
                                 <Link href={login()} className="group flex items-center gap-2 rounded-xl bg-[#F53003] px-6 py-2.5 text-xs font-bold text-white shadow-xl shadow-orange-200 transition-all hover:scale-105 hover:bg-orange-600 dark:shadow-none uppercase tracking-tighter">
@@ -247,13 +265,15 @@ export default function Welcome({
                         </div>
 
                         {showSuccess && (
-                            <div className="mb-8 p-5 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-4 animate-in slide-in-from-top-4 shadow-lg shadow-emerald-100/50 dark:bg-emerald-900/20 dark:border-emerald-900/50 dark:shadow-none">
+                            <div className="mb-8 p-5 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-4 animate-in slide-in-from-top-4 shadow-lg shadow-emerald-100/50 dark:bg-emerald-900/20 dark:border-emerald-900/50 dark:shadow-none transition-all duration-500">
                                 <div className="bg-emerald-500 p-2 rounded-full text-white">
                                     <CheckCircle2 size={24} />
                                 </div>
                                 <div>
-                                    <h4 className="font-black text-emerald-800 dark:text-emerald-400 tracking-tight">Laporan Terkirim!</h4>
-                                    <p className="text-sm font-medium text-emerald-600 dark:text-emerald-500">{flash.success}</p>
+                                    <h4 className="font-black text-emerald-800 dark:text-emerald-400 tracking-tight">Laporan Berhasil Terkirim!</h4>
+                                    <p className="text-sm font-medium text-emerald-600 dark:text-emerald-500">
+                                        Terima kasih. Laporan kehadiran anak Anda telah kami terima dan akan diteruskan ke guru terkait.
+                                    </p>
                                 </div>
                             </div>
                         )}
@@ -399,7 +419,7 @@ export default function Welcome({
                                     className="w-full md:w-auto px-12 py-5 bg-[#F53003] hover:bg-orange-600 text-white font-black uppercase tracking-widest text-sm rounded-2xl shadow-xl shadow-orange-200 flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-70 dark:shadow-none"
                                 >
                                     {processing ? (
-                                        <span className="animate-pulse flex items-center gap-2">MENGIRIM...</span>
+                                        <span className="animate-pulse flex items-center gap-2">MENGIRIM LAPORAN...</span>
                                     ) : (
                                         <><Send size={20} /> KIRIM LAPORAN SEKARANG</>
                                     )}
