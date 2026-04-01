@@ -16,6 +16,27 @@ export default function Welcome({
     const { auth, flash } = usePage().props as any;
     const [scrolled, setScrolled] = useState(false);
 
+  
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const schoolImages = [
+        "/1.jpeg", 
+        "/2.jpeg", 
+        "/3.jpeg", 
+    ];
+
+    // Efek untuk mengganti gambar otomatis setiap 3 detik
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            setCurrentImageIndex((prevIndex) => 
+                prevIndex === schoolImages.length - 1 ? 0 : prevIndex + 1
+            );
+        }, 3000); // 3000 ms = 3 detik
+
+        return () => clearInterval(intervalId); // Bersihkan interval saat komponen dilepas
+    }, [schoolImages.length]);
+    // ==========================================
+
+
     // Efek deteksi scroll untuk header dinamis
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -84,20 +105,15 @@ export default function Welcome({
         e.preventDefault();
         
         post(route('laporan.store'), {
-            preserveScroll: true, // Mencegah layar scroll ke atas secara otomatis
+            preserveScroll: true, 
             onSuccess: () => {
-                // Bersihkan form
                 reset(); 
-                // Kembalikan ke nilai default
                 setData('tanggal_izin', today); 
                 setData('jenis_laporan', 'izin'); 
-                
-                // Munculkan notifikasi sukses
                 setShowSuccess(true); 
                 setTimeout(() => setShowSuccess(false), 5000);
             },
             onError: () => {
-                // Sembunyikan sukses jika ada error validasi
                 setShowSuccess(false);
             }
         });
@@ -167,23 +183,37 @@ export default function Welcome({
                                     <Users size={20} />
                                 </div>
                                 <div>
-                                    <p className="text-xl font-black leading-none">18+</p>
                                     <p className="text-[10px] uppercase font-bold text-slate-400">Guru Profesional</p>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
+                    {/* BAGIAN SLIDESHOW GAMBAR */}
                     <div className="relative mt-16 w-full max-w-md lg:mt-0 lg:max-w-xl animate-in zoom-in duration-1000">
-                        <div className="relative aspect-square rounded-[4rem] bg-gradient-to-br from-orange-50 to-white p-12 dark:from-zinc-900 dark:to-zinc-950 shadow-inner overflow-hidden animate-floating">
+                        <div className="relative aspect-square rounded-[4rem] bg-gradient-to-br from-orange-50 to-white p-6 md:p-12 dark:from-zinc-900 dark:to-zinc-950 shadow-inner overflow-hidden animate-floating">
                              <div className="absolute inset-0 opacity-10 dark:opacity-5">
                                 <div className="grid grid-cols-6 gap-4 p-4 uppercase font-black text-orange-900">
                                     {Array(36).fill('SMP51').map((t, i) => <span key={i} className="text-[8px]">{t}</span>)}
                                 </div>
                              </div>
-                            <div className="relative h-full w-full rounded-[3rem] border-8 border-white bg-white/50 backdrop-blur shadow-2xl dark:border-zinc-800 dark:bg-black/20 flex items-center justify-center">
-                                <BookOpen size={160} strokeWidth={0.5} className="text-[#F53003] drop-shadow-2xl" />
+                            
+                            {/* Frame Gambar */}
+                            <div className="relative h-full w-full rounded-[3rem] border-8 border-white bg-white/50 backdrop-blur shadow-2xl dark:border-zinc-800 dark:bg-black/20 flex items-center justify-center overflow-hidden">
+                                {schoolImages.map((imgSrc, index) => (
+                                    <img 
+                                        key={index}
+                                        src={imgSrc} 
+                                        alt={`Sekolah SMPN 51 Makassar ${index + 1}`}
+                                        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ease-in-out ${
+                                            index === currentImageIndex ? 'opacity-100' : 'opacity-0'
+                                        }`}
+                                    />
+                                ))}
+                                {/* Overlay gradient opsional agar gambar tidak terlalu terang */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
                             </div>
+
                         </div>
                         <div className="absolute -bottom-8 -left-8 max-w-[260px] rounded-3xl bg-white/80 p-6 shadow-[0_20px_50px_rgba(0,0,0,0.1)] backdrop-blur-xl dark:bg-zinc-900/80 border border-white/20">
                             <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 text-[#F53003] dark:bg-orange-900/30">

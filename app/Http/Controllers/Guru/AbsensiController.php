@@ -251,7 +251,7 @@ class AbsensiController extends Controller
         $user = Auth::user();
         $idGuru = $user->guru->id_guru ?? null;
 
-        // Ambil data siswa di kelas tersebut beserta relasi absensi dan log whatsapp-nya
+
         $detailAbsensi = Siswa::where('kelas', $kelas)
             ->where('status', 'aktif')
             ->orderBy('nama_siswa')
@@ -259,8 +259,8 @@ class AbsensiController extends Controller
                 $query->where('tanggal', $tanggal)
                       ->where('mapel', $mapel)
                       ->where('jam_ke', $jam_ke)
-                      ->where('id_guru', $idGuru) // Pastikan hanya data milik guru ini
-                      ->with('logWhatsapp'); // Ambil juga status pengiriman WA
+                      ->where('id_guru', $idGuru) 
+                      ->with('logWhatsapp'); 
             }])
             ->get()
             ->map(function ($siswa) {
