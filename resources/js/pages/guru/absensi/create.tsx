@@ -29,7 +29,7 @@ const mapelOptions = [
 const jamOptions = Array.from({ length: 10 }, (_, i) => i + 1);
 
 export default function Create({ siswas = [], filters, kelasOptions }: any) {
-    // Inisialisasi Form dengan data dari filters (kiriman server) atau default
+    // Inisialisasi Form
     const { data, setData, post, processing } = useForm({
         kelas: filters.kelas || '',
         tanggal: filters.tanggal || new Date().toISOString().split('T')[0],
@@ -41,7 +41,7 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedSiswa, setSelectedSiswa] = useState<any>(null);
 
-    // Sinkronisasi data siswa ke state absensi saat list siswa berubah
+    // Sinkronisasi data siswa ke state absensi
     useEffect(() => {
         if (siswas.length > 0) {
             const newAbsensi = siswas.map((s: any) => ({
@@ -52,7 +52,7 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
         }
     }, [siswas]);
 
-    // Fungsi untuk reload data (Inertia Visit)
+    // Fungsi Refresh untuk filter (Inertia GET)
     const handleRefreshData = (updates: any) => {
         const newData = { ...data, ...updates };
         router.get(route('guru.absensi.create'), {
@@ -107,14 +107,14 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
             
             <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
                 
-                {/* CARD FILTER & HEADER */}
+                {/* CARD HEADER & FILTER */}
                 <Card className="rounded-3xl border-none shadow-xl shadow-slate-200/40 overflow-hidden">
                     <CardHeader className="p-5 md:p-6 border-b border-slate-100 bg-white">
                         <CardTitle className="text-lg md:text-xl font-black text-slate-800 flex items-center gap-3">
                             <div className="p-2.5 bg-blue-600 rounded-xl text-white shadow-lg shadow-blue-200">
                                 <Plus size={20} />
                             </div>
-                            Input Absensi Baru door
+                            Input Absensi Baru
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="p-5 md:p-6 bg-slate-50/50">
@@ -190,7 +190,7 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
                                 </Select>
                             </div>
 
-                            {/* TANGGAL - FIXED RESET ISSUE */}
+                            {/* TANGGAL - MENGGUNAKAN INPUT BAWAAN */}
                             <div className="space-y-2">
                                 <Label className="text-[10px] font-black uppercase text-slate-500">Tanggal</Label>
                                 <div className="relative">
@@ -198,26 +198,26 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
                                         type="date" 
                                         value={data.tanggal} 
                                         onChange={(e) => {
-                                            const tgl = e.target.value;
-                                            setData('tanggal', tgl);
-                                            handleRefreshData({ tanggal: tgl });
+                                            const newDate = e.target.value;
+                                            setData('tanggal', newDate);
+                                            handleRefreshData({ tanggal: newDate });
                                         }} 
-                                        className="pl-9 rounded-xl h-11 bg-white" 
+                                        className="pl-9 rounded-xl h-11 bg-white border-slate-200" 
                                     />
-                                    <Calendar className="absolute left-3 top-3.5 text-slate-400" size={14} />
+                                    <Calendar className="absolute left-3 top-3.5 text-slate-400 pointer-events-none" size={14} />
                                 </div>
                             </div>
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* FORM ABSENSI */}
+                {/* LIST SISWA */}
                 <form onSubmit={handleSubmit} className="space-y-3 relative">
                     {siswas.length > 0 ? (
                         siswas.map((siswa: any, index: number) => (
                             <div key={siswa.id_siswa} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-3 md:p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:border-blue-300">
                                 <div className="flex items-center gap-3">
-                                    <div className="h-10 w-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
+                                    <div className="h-10 w-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 shrink-0">
                                         <UserCircle2 size={24} strokeWidth={1.5} />
                                     </div>
                                     <div>
@@ -228,7 +228,7 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
                                                 <button 
                                                     type="button"
                                                     onClick={() => openLaporanModal(siswa)}
-                                                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase transition-all ${
+                                                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase transition-colors ${
                                                         siswa.laporan_ortu.status_laporan === 'menunggu' 
                                                         ? 'bg-amber-100 text-amber-700 animate-pulse'
                                                         : 'bg-emerald-100 text-emerald-700'
@@ -245,7 +245,7 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
                                 <div className="grid grid-cols-4 md:flex gap-1.5 md:gap-2 w-full md:w-auto">
                                     {['hadir', 'izin', 'sakit', 'alpha'].map((status) => {
                                         const isActive = getStatus(siswa.id_siswa) === status;
-                                        const colorMap: any = {
+                                        const colors: any = {
                                             hadir: isActive ? 'bg-emerald-500 text-white border-emerald-500 shadow-md' : 'bg-slate-50 text-slate-500 border-slate-200',
                                             izin: isActive ? 'bg-blue-500 text-white border-blue-500 shadow-md' : 'bg-slate-50 text-slate-500 border-slate-200',
                                             sakit: isActive ? 'bg-amber-500 text-white border-amber-500 shadow-md' : 'bg-slate-50 text-slate-500 border-slate-200',
@@ -257,7 +257,7 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
                                                 key={status}
                                                 type="button"
                                                 onClick={() => handleStatusChange(siswa.id_siswa, status)}
-                                                className={`py-2 px-1 md:px-5 rounded-xl border font-black text-[9px] md:text-[10px] uppercase tracking-widest transition-all ${colorMap[status]}`}
+                                                className={`py-2 px-1 md:px-5 rounded-xl border font-black text-[9px] md:text-[10px] uppercase tracking-widest transition-all ${colors[status]}`}
                                             >
                                                 {status}
                                             </button>
@@ -268,13 +268,12 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
                         ))
                     ) : (
                         <div className="py-20 text-center rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50">
-                            <p className="text-slate-400 font-medium text-sm text-balance px-4">Silakan pilih kelas, mata pelajaran, dan jam untuk memunculkan daftar siswa.</p>
+                            <p className="text-slate-400 font-medium text-sm text-balance px-4 text-center">Silakan pilih kelas, mata pelajaran, dan jam untuk memunculkan daftar siswa.</p>
                         </div>
                     )}
 
                     <div className="h-32 md:h-40 w-full pointer-events-none"></div>
 
-                    {/* FLOATING SUBMIT */}
                     <div className="fixed bottom-0 left-0 md:left-64 right-0 p-4 bg-white/90 backdrop-blur-xl border-t border-slate-200 z-40">
                         <div className="max-w-4xl mx-auto flex justify-end">
                             <Button 
