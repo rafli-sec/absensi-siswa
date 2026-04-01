@@ -1,8 +1,11 @@
-# Rangkuman Project Absensi Sekolah + WhatsApp Notification
+# Rangkuman Project Absensi Sekolah + WhatsApp Notification + Laporan Ortu
 
 ## 📋 Deskripsi Project
 
-Project ini adalah aplikasi sistem informasi absensi sekolah berbasis web yang dibangun dengan **Laravel 12** (backend) dan **React** (frontend menggunakan Inertia.js). Sistem ini memungkinkan guru untuk melakukan absensi siswa dan mengirimkan notifikasi WhatsApp otomatis kepada orang tua/wali ketika siswa tidak hadir.
+Project ini adalah aplikasi sistem informasi absensi sekolah berbasis web yang dibangun dengan **Laravel 12** (backend) dan **React** (frontend menggunakan Inertia.js). Sistem ini memungkinkan:
+- **Guru** untuk melakukan absensi siswa dan mengirimkan notifikasi WhatsApp otomatis kepada orang tua/wali
+- **Orang Tua** untuk mengirimkan laporan ketidakhadiran (sakit/izin/pengaduan) via WhatsApp atau form
+- **Admin** untuk mengelola data guru, siswa, dan memantau laporan orang tua
 
 ---
 
@@ -152,6 +155,20 @@ Buka browser: http://localhost:8000
 | waktu_kirim | datetime | Waktu pengiriman (nullable) |
 | timestamps | timestamps | created_at, updated_at |
 
+#### 6. `laporan_ortus` - Laporan dari Orang Tua ⭐ BARU
+| Kolom | Tipe | Keterangan |
+|-------|------|-------------|
+| id_laporan | bigint | Primary key (自增) |
+| id_siswa | bigint | Foreign key ke siswas |
+| nama_pengirim | string(100) | Nama pengirim laporan |
+| no_hp_pengirim | string(15) | No. HP pengirim |
+| tanggal_izin | date | Tanggal izin/sakit |
+| jenis_laporan | enum | 'sakit', 'izin', 'pengaduan' |
+| pesan | text | Detail laporan |
+| status | enum | 'diterima', 'ditolak', NULL (menunggu) |
+| id_guru | bigint | Foreign key ke gurus (validator) |
+| timestamps | timestamps | created_at, updated_at |
+
 ### Relasi Antar Tabel
 
 ```
@@ -162,13 +179,17 @@ users (otentikasi)
          │
          └──► gurus (one-to-one via user_id)
               │
-              └──► absensis (one-to-many)
-                        │
-                        └──► log_whatsapps (one-to-many)
+              ├──► absensis (one-to-many)
+              │         │
+              │         └──► log_whatsapps (one-to-many)
+              │
+              └──► laporan_ortus (one-to-many, sebagai validator)
 
 siswas
     │
-    └──► absensis (one-to-many)
+    ├──► absensis (one-to-many)
+    │
+    └──► laporan_ortus (one-to-many)
 ```
 
 ---
@@ -224,12 +245,17 @@ DELETE /admin/guru/{id}         - Hapus Guru
 GET    /admin/siswa             - List Siswa
 GET    /admin/siswa/create      - Form tambah Siswa
 POST   /admin/siswa             - Simpan Siswa baru
-GET    /admin/siswa/{id}/edit   - Form edit Siswa
-PUT    /admin/siswa/{id}        - Update Siswa
-DELETE /admin/siswa/{id}        - Hapus Siswa
+GET    /admin/siswa/{id}/edit        - Form edit Siswa
+PUT    /admin/siswa/{id}             - Update Siswa
+DELETE /admin/siswa/{id}             - Hapus Siswa
+
+GET    /admin/laporan                - List Laporan Ortu ⭐ BARU
+PUT    /admin/laporan/{id}/status    - Update status laporan ⭐ BARU
+DELETE /admin/laporan/{id}            - Hapus laporan ⭐ BARU
 ```
 
 ### Guru Routes (Prefix: /guru)
+
 ```
 GET    /guru/dashboard          - Dashboard Guru
 GET    /guru/absensi            - List Absensi
@@ -237,7 +263,10 @@ GET    /guru/absensi/create    - Form buat Absensi
 POST   /guru/absensi            - Simpan Absensi
 GET    /guru/absensi/show/{kelas}/{tanggal} - Detail Absensi
 GET    /guru/absensi/edit/{kelas}/{tanggal} - Form edit Absensi
+PUT    /guru/absensi/{kelas}/{tanggal} - Update Absensi
 DELETE /guru/absensi/{kelas}/{tanggal} - Hapus Absensi
+
+PUT    /guru/laporan/{id}/validasi   - Validasi laporan ortu ⭐ BARU
 ```
 
 ---
@@ -254,49 +283,85 @@ DELETE /guru/absensi/{kelas}/{tanggal} - Hapus Absensi
    (Status: hadir/izin/sakit/alpha)
          │
          ▼
-3. Cek Status Kehadiran
-   ├── Jika "hadir" → TIDAK dikirim WhatsApp
-   │
-   └── Jika "izin/sakit/alpha" →
-              │
-              ▼
-         Simpan ke tabel log_whatsapps
-              │
-              ▼
-         Status: "pending"
-              │
-              ▼
-         Dispatch Job ke Queue
-              │
-              ▼
-         Queue Worker memproses
-         (php artisan queue:work)
-              │
-              ▼
-         Kirim via API Fonnte
-              │
-              ▼
-         Update status: berhasil / gagal
+3. Kirim Notifikasi WhatsApp
+   (SEMUA status dikirim - hadir, izin, sakit, alpha)
+         │
+         ▼
+4. Simpan ke tabel log_whatsapps
+         │
+         ▼
+5. Status: "pending"
+         │
+         ▼
+6. Dispatch Job ke Queue
+         │
+         ▼
+7. Queue Worker memproses
+   (php artisan queue:work)
+         │
+         ▼
+8. Kirim via API Fonnte
+         │
+         ▼
+9. Update status: berhasil / gagal
 ```
 
 ### Pesan WhatsApp
 
 Pesan yang dikirimkan ke orang tua:
 ```
-Assalamu'alaikum Wr. Wb.
+*PEMBERITAHUAN ABSENSI SEKOLAH*
 
-Yth. Orang Tua/Wali Siswa
+Yth. Wali Murid,
+Siswa a.n: *[nama_siswa]*
+Kelas: [kelas]
+Mata Pelajaran: [mapel]
+Jam Ke: [jam_ke]
+Status Kehadiran: *[status_kehadiran]* [emoji]
 
-Dengan ini kami informasikan bahwa anak Anda:
-📌 Nama: [nama_siswa]
-📌 Kelas: [kelas]
-📌 Tanggal: [tanggal]
-📌 Status: [status_kehadiran]
-
-Mohon perhatiannya.
-
-Wassalamu'alaikum Wr. Wb.
+Terima kasih atas perhatiannya.
 ```
+
+**Emoji:**
+- ✅ Hadir
+- 💊 Sakit
+- 📝 Izin
+- ❌ Alpha
+
+---
+
+## 📱 Cara Kerja Laporan Orang Tua ⭐ BARU
+
+### Flowchart Laporan Ortu
+
+```
+1. Orang Tua Kirim Laporan
+   (via WhatsApp Bot atau Form)
+         │
+         ▼
+2. Simpan ke tabel laporan_ortus
+   - Status: NULL (Menunggu)
+   - id_guru: NULL
+         │
+         ▼
+3. Admin/Guru Melihat Laporan
+   - Status "Menunggu" (warna kuning)
+         │
+         ▼
+4. Guru Validasi Laporan
+   ├── Diterima → Status: "diterima" (hijau)
+   └── Ditolak  → Status: "ditolak" (merah)
+         │
+         ▼
+5. Saat Guru Absen
+   - Laporan yang "diterima" muncul di data siswa
+   - Guru bisa lihat detail laporan ortu
+```
+
+### Jenis Laporan
+1. **Sakit** - Laporan ketidakhadiran karena sakit
+2. **Izin** - Laporan izin tidak masuk sekolah
+3. **Pengaduan** - Laporan umum dari orang tua
 
 ---
 
@@ -322,13 +387,30 @@ Pastikan siswa memiliki nomor HP orang tua/wali:
 2. Buka menu Absensi Siswa
 3. Pilih Kelas, Mata Pelajaran, Jam Ke, Tanggal
 4. Daftar siswa akan muncul
-5. Ubah status kehadiran:
-   - **Hadir** = Tidak dikirimkan WhatsApp
-   - **Izin/Sakit/Alpha** = Akan dikirimkan WhatsApp ke orang tua
+5. **Laporan Ortu** yang sudah diterima akan muncul badge notifikasi
+6. Ubah status kehadiran (Hadir/Izin/Sakit/Alpha)
+7. Klik "Simpan Absensi"
+8. Notifikasi WhatsApp otomatis terkirim ke semua ortu
 
-6. Klik "Simpan Absensi"
+### 3. Validasi Laporan Ortu (Guru)
 
-### 3. Monitoring Kirim WhatsApp
+1. Login sebagai Guru
+2. Buka menu Absensi
+3. Lihat badge "Ada Laporan" di siswa yang memiliki laporan
+4. Klik untuk melihat detail laporan
+5. Validasi laporan (Terima/Tolak)
+
+### 4. Monitoring Laporan Ortu (Admin)
+
+1. Login sebagai Admin
+2. Buka menu "Laporan Orang Tua"
+3. Pantau semua laporan masuk
+4. Update status laporan via dropdown:
+   - **Menunggu** (Kuning) - Belum divalidasi
+   - **Diterima** (Hijau) - Laporan diterima
+   - **Ditolak** (Merah) - Laporan ditolak
+
+### 5. Monitoring Kirim WhatsApp
 
 Cek status pengiriman di database:
 
@@ -357,7 +439,7 @@ php artisan queue:work
 ### Test Kirim dari Aplikasi
 
 1. Login sebagai Guru
-2. Buat absensi dengan status selain "hadir"
+2. Buat absensi dengan status apapun (hadir/izin/sakit/alpha)
 3. Pastikan queue worker sedang berjalan
 4. Pesan WhatsApp akan otomatis terkirim
 
@@ -386,7 +468,7 @@ APP_URL=http://localhost:8000
 
 ### Queue Configuration
 
-Pastikan queue driver sudah设置为 database di `.env`:
+Pastikan queue driver sudah di-set ke database di `.env`:
 
 ```env
 QUEUE_CONNECTION=database
@@ -429,6 +511,13 @@ php artisan tinker
 // Buat relasi user dengan guru
 ```
 
+### Laporan Ortu tidak muncul di Absensi?
+
+Pastikan:
+1. Laporan sudah divalidasi status "diterima" oleh guru
+2. Tanggal laporan (`tanggal_izin`) sama dengan tanggal absensi
+3. Siswa yang melapor benar-benar ada di kelas yang dipilih
+
 ---
 
 ## 📁 Struktur Folder Penting
@@ -443,7 +532,9 @@ app/
 │   │   ├── Admin/                 # Controller untuk Admin
 │   │   │   ├── DashboardController.php
 │   │   │   ├── GuruController.php
+│   │   │   ├── LaporanController.php      ⭐ BARU
 │   │   │   ├── SiswaController.php
+│   │   │   ├── LogWhatsappController.php
 │   │   │   └── WhatsappLogController.php
 │   │   ├── Api/
 │   │   │   └── Admin/             # API Controller
@@ -455,16 +546,21 @@ app/
 │   │   └── Settings/              # Controller Settings
 │   ├── Middleware/
 │   │   ├── IsAdmin.php
-│   │   └── IsGuru.php
+│   │   ├── IsGuru.php
+│   │   ├── HandleAppearance.php
+│   │   ├── HandleInertiaRequests.php
+│   │   └── RoleMiddleware.php
 │   └── Requests/
 ├── Jobs/
 │   └── SendWaAbsensi.php          # Job untuk kirim WhatsApp
-└── Models/
-    ├── Absensi.php
-    ├── Guru.php
-    ├── LogWhatsapp.php
-    ├── Siswa.php
-    └── User.php
+├── Models/
+│   ├── Absensi.php
+│   ├── Guru.php
+│   ├── LaporanOrtu.php            ⭐ BARU
+│   ├── LogWhatsapp.php
+│   ├── Siswa.php
+│   └── User.php
+└── Providers/
 
 resources/
 └── js/
@@ -474,14 +570,20 @@ resources/
     │   ├── admin/                 # Halaman Admin
     │   │   ├── dashboard.tsx
     │   │   ├── guru/
+    │   │   ├── laporan/           ⭐ BARU
+    │   │   │   └── index.tsx
     │   │   └── siswa/
     │   ├── auth/                  # Halaman Auth
     │   ├── guru/                  # Halaman Guru
     │   │   ├── dashboard.tsx
     │   │   └── absensi/
+    │   │       ├── create.tsx
+    │   │       ├── edit.tsx
+    │   │       ├── index.tsx
+    │   │       └── show.tsx
     │   ├── settings/              # Halaman Settings
     │   └── whatsapp/              # Halaman Monitoring WA
-    └── routes/                    # Konfigurasi Routes
+    └── types/
 
 routes/
 ├── api.php                       # API Routes
@@ -523,8 +625,31 @@ php artisan migrate:fresh
 
 1. **Queue Worker WAJIB Running** - Tanpa ini, WhatsApp tidak akan terkirim
 2. **Nomor HP format** - Gunakan format: 6281234567890 (dengan 62)
-3. **Jeda Pengiriman** - Ada jeda 5 detik antar pesan untuk menghindari spam
-4. **Status Tidak Dikirim** - Pesan hanya dikirim jika status kehadiran bukan "hadir"
-5. **Laravel Fortify** - Sistem authentication menggunakan Fortify dengan fitur 2FA
-6. **Laravel Sanctum** - Untuk API token-based authentication
+3. **Jeda Pengiriman** - Ada jeda 5-10 detik antar pesan (server-side Fonnte)
+4. **Semua Status Dikirim** - Pesan dikirim untuk SEMUA status (hadir, izin, sakit, alpha)
+5. **Laporan Ortu** - Harus divalidasi guru agar muncul di data absensi
+6. **Laravel Fortify** - Sistem authentication menggunakan Fortify dengan fitur 2FA
+7. **Laravel Sanctum** - Untuk API token-based authentication
+8. **Retry Job** - Job akan retry 3x jika gagal, dengan backoff 60 detik
 
+---
+
+## 🆕 Update Terbaru
+
+### v2.0 - Fitur Laporan Orang Tua
+- ✅ Orang tua bisa kirim laporan sakit/izin/pengaduan
+- ✅ Guru bisa validasi laporan (terima/tolak)
+- ✅ Admin bisa pantau semua laporan
+- ✅ Laporan yang diterima muncul di data absensi
+
+### v1.5 - Perbaikan WhatsApp
+- ✅ Semua status absensi dikirim notifikasi (termasuk hadir)
+- ✅ Pesan lebih informatif dengan emoji
+- ✅ Retry mechanism jika pengiriman gagal
+- ✅ Delay 5-10 detik antar pesan
+
+### v1.0 - Initial Release
+- ✅ Sistem absensi guru
+- ✅ Notifikasi WhatsApp otomatis
+- ✅ Manajemen data guru & siswa
+- ✅ Role-based access (Admin & Guru)

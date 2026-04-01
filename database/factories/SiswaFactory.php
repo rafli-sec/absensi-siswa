@@ -14,18 +14,21 @@ class SiswaFactory extends Factory
             
             'nama_siswa' => $this->faker->name(),
             
-            // Kelas acak
-            'kelas' => $this->faker->randomElement(['7A', '7B','7C', '8A', '8B','8C', '9A',]), 
-            
-            // PENTING: Harus 'laki-laki' atau 'perempuan' (Sesuai Gambar DB)
-            'jenis_kelamin' => $this->faker->randomElement(['laki-laki', 'perempuan']), 
+            // Kelas acak sesuai pilihan di SMPN 51 Makassar
+            'kelas' => $this->faker->randomElement(['7A', '7B', '7C', '8A', '8B', '8C', '9A']), 
             
             'alamat' => $this->faker->address(),
+
+            // Tambahkan nama orang tua agar tidak error (Sesuai update skema terakhir)
+            'nama_ortu' => $this->faker->name(), 
             
-            // No HP max 15 karakter
-            'no_hp_ortu' => substr($this->faker->phoneNumber(), 0, 15), 
+            // PENTING: Harus 'laki-laki' atau 'perempuan'
+            'jenis_kelamin' => $this->faker->randomElement(['laki-laki', 'perempuan']), 
             
-            // PENTING: Harus 'aktif' atau 'tidak_aktif' (Sesuai Gambar DB)
+            // Format 628... agar langsung bisa diuji coba dengan fitur WA Fonnte
+            'no_hp_ortu' => '628' . $this->faker->numerify('#########'), 
+            
+            // Status kehadiran/aktif
             'status' => $this->faker->randomElement(['aktif', 'tidak_aktif']), 
         ];
     }

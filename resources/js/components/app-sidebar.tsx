@@ -47,6 +47,12 @@ export function AppSidebar() {
             role: 'guru', 
         },
         {
+            title: 'Laporan',
+            href: '/admin/laporan',
+            icon: ClipboardCheck,
+            role: 'admin', 
+        },
+        {
             title: 'Log WhatsApp',
             href: '/whatsapp-monitoring', 
             icon: MessageCircleCodeIcon,

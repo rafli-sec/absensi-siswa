@@ -48,7 +48,7 @@ class SendWaAbsensi implements ShouldQueue
             ])->post('https://api.fonnte.com/send', [
                 'target'      => $log->no_tujuan,
                 'message'     => $log->pesan,
-                'delay'       => '5-10', // Gunakan delay server-side Fonnte (Lebih Aman)
+                'delay'       => '5-10', 
                 'countryCode' => '62',
             ]);
 

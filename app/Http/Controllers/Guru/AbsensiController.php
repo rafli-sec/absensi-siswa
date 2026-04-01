@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Absensi;
 use App\Models\Siswa;
 use App\Models\LogWhatsapp;
+use App\Models\LaporanOrtu;
 use App\Jobs\SendWaAbsensi;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -71,13 +72,28 @@ class AbsensiController extends Controller
                           ->where('mapel', $mapel)
                           ->where('jam_ke', $jam_ke);
                 }])
+                // MENGAMBIL DATA LAPORAN ORTU
+                ->with(['laporanOrtu' => function ($query) use ($tanggal) {
+                    $query->where('tanggal_izin', $tanggal)->with('guru');
+                }])
                 ->get()
                 ->map(function ($siswa) {
+                    $laporan = $siswa->laporanOrtu->first();
+                    
                     return [
                         'id_siswa' => $siswa->id_siswa,
                         'nis' => $siswa->nis,
                         'nama_siswa' => $siswa->nama_siswa,
                         'status_kehadiran' => $siswa->absensi->first()->status_kehadiran ?? 'hadir', 
+                        
+                        // Kirim data laporan ke frontend untuk dibaca guru
+                        'laporan_ortu' => $laporan ? [
+                            'id_laporan' => $laporan->id_laporan,
+                            'jenis' => $laporan->jenis_laporan,
+                            'pesan' => $laporan->pesan,
+                            'status_laporan' => $laporan->status ?? 'menunggu',
+                            'nama_guru_validator' => $laporan->guru->nama_guru ?? null
+                        ] : null
                     ];
                 });
         }
@@ -115,7 +131,7 @@ class AbsensiController extends Controller
 
         try {
             foreach ($request->absensi as $item) {
-                // 1. Simpan atau Update Absensi ke Database [cite: 4]
+                // 1. Simpan atau Update Absensi ke Database
                 $absensi = Absensi::updateOrCreate(
                     [
                         'id_siswa' => $item['id_siswa'],
@@ -173,6 +189,27 @@ class AbsensiController extends Controller
         }
     }
 
+    // FUNGSI BARU: VALIDASI LAPORAN ORANG TUA OLEH GURU
+    public function validasiLaporan(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|in:diterima,ditolak'
+        ]);
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $idGuru = $user->guru->id_guru ?? null;
+
+        $laporan = LaporanOrtu::findOrFail($id);
+        
+        $laporan->update([
+            'status' => $request->status,
+            'id_guru' => $idGuru
+        ]);
+
+        return redirect()->back()->with('success', 'Status laporan berhasil diperbarui.');
+    }
+
     public function edit(Request $request, $kelas, $tanggal)
     {
         $mapel = $request->query('mapel');
@@ -204,6 +241,7 @@ class AbsensiController extends Controller
             'jam_ke' => $jam_ke
         ]);
     }
+    
     public function show(Request $request, $kelas, $tanggal)
     {
         $mapel = $request->query('mapel');

@@ -13,6 +13,7 @@ class LaporanOrtu extends Model
 
     protected $fillable = [
         'id_siswa', 
+        'id_guru',       
         'nama_pengirim', 
         'no_hp_pengirim', 
         'tanggal_izin', 
@@ -25,5 +26,11 @@ class LaporanOrtu extends Model
     public function siswa()
     {
         return $this->belongsTo(Siswa::class, 'id_siswa', 'id_siswa');
+    }
+
+    // Relasi ke Guru
+    public function guru()
+    {
+        return $this->belongsTo(Guru::class, 'id_guru', 'id_guru');
     }
 }

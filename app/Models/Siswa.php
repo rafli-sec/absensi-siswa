@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-
+use App\Models\LaporanOrtu;
 class Siswa extends Model
 {
     use HasFactory;
@@ -26,5 +26,9 @@ class Siswa extends Model
     public function absensi()
     {
         return $this->hasMany(Absensi::class, 'id_siswa', 'id_siswa');
+    }
+    public function laporanOrtu()
+    {
+        return $this->hasMany(LaporanOrtu::class, 'id_siswa', 'id_siswa');
     }
 }
