@@ -325,7 +325,7 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
                                             Terima Izin
                                         </button>
                                     </div>
-                                ) : (
+                                ) : (//a
                                     <div className="pt-4 border-t border-slate-100 text-center">
                                         <p className="text-xs font-black uppercase text-emerald-600 flex items-center justify-center gap-2">
                                             <CheckCircle2 size={16} /> Telah {selectedSiswa.laporan_ortu.status_laporan}
