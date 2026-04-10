@@ -26,7 +26,7 @@ const mapelOptions = [
 ];
 
 // Jam pelajaran SMP (1-10)
-const jamOptions = Array.from({ length: 10 }, (_, i) => i + 1);
+const jamOptions = Array.from({ length:9 }, (_, i) => i + 1);
 
 export default function Create({ siswas = [], filters, kelasOptions }: any) {
     // Inisialisasi Form
