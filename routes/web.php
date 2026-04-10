@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\SiswaController;
 use App\Http\Controllers\Admin\LaporanController;
 use App\Http\Controllers\Admin\WhatsappLogController;
 use App\Http\Controllers\Guru\AbsensiController;
+use App\Http\Controllers\Guru\RekapController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -73,8 +74,6 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::put('/laporan/{id}/status', [LaporanController::class, 'updateStatus'])->name('laporan.update-status');
     Route::delete('/laporan/{id}', [LaporanController::class, 'destroy'])->name('laporan.destroy');
 
-
-
 });
 
 /*
@@ -90,7 +89,7 @@ Route::middleware(['auth', 'verified', 'guru'])->prefix('guru')->name('guru.')->
     Route::get('/absensi/show/{kelas}/{tanggal}', [AbsensiController::class, 'show'])->name('absensi.show'); 
     Route::delete('/absensi/{kelas}/{tanggal}', [AbsensiController::class, 'destroy'])->name('absensi.destroy');
     Route::get('/absensi/edit/{kelas}/{tanggal}', [AbsensiController::class, 'edit'])->name('absensi.edit'); 
-    
+    Route::get('/rekap', [RekapController::class, 'index'])->name('rekap.index');
     Route::put('/laporan/{id}/validasi', [AbsensiController::class, 'validasiLaporan'])->name('laporan.validasi');   
 });
 
@@ -99,3 +98,4 @@ Route::middleware(['auth', 'verified', 'guru'])->prefix('guru')->name('guru.')->
 Route::get('/api/siswa-by-kelas/{kelas}', [PublicController::class, 'getSiswaByKelas']);
 Route::post('/laporan-ortu', [PublicController::class, 'storeLaporan'])->name('laporan.store');
 require __DIR__.'/settings.php';
+

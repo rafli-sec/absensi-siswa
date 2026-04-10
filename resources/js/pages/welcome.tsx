@@ -8,6 +8,14 @@ import {
 import { useEffect, useState, FormEventHandler } from 'react';
 import axios from 'axios';
 
+// --- DATA FOTO SLIDESHOW ---
+// Pastikan file gambar ini ada di folder public/images/ di project Laravel Anda
+const schoolImages = [
+    '/1.jpeg',
+    '/2.jpeg',
+    '/3.jpeg',
+];
+
 export default function Welcome({
     canRegister = true,
 }: {
@@ -16,6 +24,17 @@ export default function Welcome({
     const { auth, flash } = usePage().props as any;
     const [scrolled, setScrolled] = useState(false);
 
+    // --- STATE UNTUK SLIDESHOW ---
+    const [currentImgIdx, setCurrentImgIdx] = useState(0);
+
+    // Efek ganti gambar otomatis setiap 4 detik
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentImgIdx((prev) => (prev + 1) % schoolImages.length);
+        }, 4000);
+        return () => clearInterval(timer);
+    }, []);
+
     // Efek deteksi scroll untuk header dinamis
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -23,7 +42,7 @@ export default function Welcome({
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    // Data Guru sesuai Roster Genap 2026 
+    // Data Guru
     const listGuru = [
         { nama: 'Haerani, S.Pd., M.Pd.', mapel: 'Kepala Sekolah / IPA', initial: 'H' },
         { nama: 'Sukaeni, S.Pd.I., M.Pd', mapel: 'PAI', initial: 'S' },
@@ -39,19 +58,18 @@ export default function Welcome({
     const [showSuccess, setShowSuccess] = useState(false);
     const [daftarSiswa, setDaftarSiswa] = useState<any[]>([]);
     const [isLoadingSiswa, setIsLoadingSiswa] = useState(false);
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split('T')[0]; // Tanggal hari ini
 
     const { data, setData, post, processing, errors, reset } = useForm({
         nama_pengirim: '',
         no_hp_pengirim: '',
         kelas: '',
         id_siswa: '', 
-        tanggal_izin: today,
+        tanggal_izin: today, // Set Default Hari ini
         jenis_laporan: 'izin',
         pesan: '',
     });
 
-    // Menampilkan notifikasi dari flash session (sebagai backup)
     useEffect(() => {
         if (flash?.success) {
             setShowSuccess(true);
@@ -59,7 +77,6 @@ export default function Welcome({
         }
     }, [flash]);
 
-    // Efek: Jika kelas berubah, ambil data siswa dari API
     useEffect(() => {
         if (data.kelas) {
             setIsLoadingSiswa(true);
@@ -79,27 +96,18 @@ export default function Welcome({
         }
     }, [data.kelas]);
 
-    // Handler Submit dengan reset & alert dinamis
     const submitLaporan: FormEventHandler = (e) => {
         e.preventDefault();
-        
         post(route('laporan.store'), {
-            preserveScroll: true, // Mencegah layar scroll ke atas secara otomatis
+            preserveScroll: true,
             onSuccess: () => {
-                // Bersihkan form
                 reset(); 
-                // Kembalikan ke nilai default
                 setData('tanggal_izin', today); 
                 setData('jenis_laporan', 'izin'); 
-                
-                // Munculkan notifikasi sukses
                 setShowSuccess(true); 
                 setTimeout(() => setShowSuccess(false), 5000);
             },
-            onError: () => {
-                // Sembunyikan sukses jika ada error validasi
-                setShowSuccess(false);
-            }
+            onError: () => setShowSuccess(false)
         });
     };
     // ==========================================
@@ -167,25 +175,54 @@ export default function Welcome({
                                     <Users size={20} />
                                 </div>
                                 <div>
-                                    <p className="text-xl font-black leading-none">18+</p>
+                                    {/* <p className="text-xl font-black leading-none">18+</p> */}
                                     <p className="text-[10px] uppercase font-bold text-slate-400">Guru Profesional</p>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
+                    {/* BAGIAN SLIDESHOW FOTO SEKOLAH */}
                     <div className="relative mt-16 w-full max-w-md lg:mt-0 lg:max-w-xl animate-in zoom-in duration-1000">
-                        <div className="relative aspect-square rounded-[4rem] bg-gradient-to-br from-orange-50 to-white p-12 dark:from-zinc-900 dark:to-zinc-950 shadow-inner overflow-hidden animate-floating">
+                        <div className="relative aspect-square rounded-[4rem] bg-gradient-to-br from-orange-50 to-white p-10 dark:from-zinc-900 dark:to-zinc-950 shadow-inner overflow-hidden animate-floating">
                              <div className="absolute inset-0 opacity-10 dark:opacity-5">
                                 <div className="grid grid-cols-6 gap-4 p-4 uppercase font-black text-orange-900">
                                     {Array(36).fill('SMP51').map((t, i) => <span key={i} className="text-[8px]">{t}</span>)}
                                 </div>
                              </div>
-                            <div className="relative h-full w-full rounded-[3rem] border-8 border-white bg-white/50 backdrop-blur shadow-2xl dark:border-zinc-800 dark:bg-black/20 flex items-center justify-center">
-                                <BookOpen size={160} strokeWidth={0.5} className="text-[#F53003] drop-shadow-2xl" />
+                             
+                            {/* Wadah Frame Foto */}
+                            <div className="relative h-full w-full rounded-[3rem] border-8 border-white bg-slate-200 shadow-2xl dark:border-zinc-800 flex items-center justify-center overflow-hidden">
+                                {schoolImages.map((img, idx) => (
+                                    <img 
+                                        key={idx}
+                                        src={img} 
+                                        alt={`Lingkungan Sekolah ${idx + 1}`}
+                                        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
+                                            idx === currentImgIdx ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                                        }`}
+                                        // Gunakan placeholder fallback jika foto tidak ditemukan
+                                        onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?q=80&w=800&auto=format&fit=crop'; }}
+                                    />
+                                ))}
+                                {/* Efek gradien tipis di bawah foto agar terlihat elegan */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent z-20 pointer-events-none"></div>
+                                
+                                {/* Indikator Titik Slideshow */}
+                                <div className="absolute bottom-6 left-0 right-0 z-30 flex justify-center gap-2">
+                                    {schoolImages.map((_, index) => (
+                                        <div
+                                            key={index}
+                                            className={`h-2 rounded-full transition-all duration-300 ${
+                                                index === currentImgIdx ? 'bg-white w-6' : 'bg-white/50 w-2'
+                                            }`}
+                                        />
+                                    ))}
+                                </div>
                             </div>
                         </div>
-                        <div className="absolute -bottom-8 -left-8 max-w-[260px] rounded-3xl bg-white/80 p-6 shadow-[0_20px_50px_rgba(0,0,0,0.1)] backdrop-blur-xl dark:bg-zinc-900/80 border border-white/20">
+                        
+                        <div className="absolute -bottom-8 -left-8 max-w-[260px] rounded-3xl bg-white/80 p-6 shadow-[0_20px_50px_rgba(0,0,0,0.1)] backdrop-blur-xl dark:bg-zinc-900/80 border border-white/20 z-40">
                             <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 text-[#F53003] dark:bg-orange-900/30">
                                 <MapPin size={18} />
                             </div>
@@ -249,7 +286,7 @@ export default function Welcome({
                     </div>
                 </section>
 
-                {/* 5. NEW SECTION: LAPORAN ORANG TUA */}
+                {/* 5. LAPORAN ORANG TUA SECTION */}
                 <section id="laporan" className="relative py-32 px-6 overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-b from-transparent via-orange-50/50 to-transparent dark:via-orange-950/10" />
                     
@@ -366,18 +403,21 @@ export default function Welcome({
                             {/* Detail Laporan */}
                             <div className="space-y-6 pt-6 border-t border-slate-100 dark:border-zinc-800">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                    
+                                    {/* BAGIAN TANGGAL: SUDAH DI-DISABLED AGAR SAMA DENGAN CREATE.TSX */}
                                     <div>
                                         <label className="block text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2">Tanggal Berhalangan</label>
                                         <div className="relative">
                                             <Calendar size={18} className="absolute left-5 top-4 text-slate-400" />
                                             <input
                                                 type="date"
-                                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-5 py-4 text-sm font-bold text-slate-800 focus:ring-blue-500 focus:border-blue-500 transition-all dark:bg-zinc-950 dark:border-zinc-800 dark:text-slate-200"
+                                                className="w-full bg-slate-50/70 border border-slate-200 rounded-2xl pl-12 pr-5 py-4 text-sm font-bold text-slate-500 cursor-not-allowed dark:bg-zinc-950 dark:border-zinc-800 dark:text-slate-500 transition-all"
                                                 value={data.tanggal_izin}
-                                                onChange={e => setData('tanggal_izin', e.target.value)}
+                                                disabled // Dikunci agar tidak bisa diubah (otomatis hari ini)
                                                 required
                                             />
                                         </div>
+                                        <p className="text-[10px] text-slate-400 font-medium mt-2 italic">*Tanggal dikunci otomatis untuk hari ini.</p>
                                     </div>
 
                                     <div>
@@ -385,13 +425,13 @@ export default function Welcome({
                                         <div className="flex gap-3 h-[54px]">
                                             <label className="flex-1 relative cursor-pointer group">
                                                 <input type="radio" name="jenis" value="izin" checked={data.jenis_laporan === 'izin'} onChange={e => setData('jenis_laporan', e.target.value)} className="peer sr-only" />
-                                                <div className="h-full flex items-center justify-center rounded-2xl border-2 border-slate-200 bg-slate-50 text-slate-500 font-black text-sm tracking-widest uppercase transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:text-blue-600 group-hover:border-blue-200 dark:bg-zinc-950 dark:border-zinc-800 dark:peer-checked:bg-blue-900/20">
+                                                <div className="h-full flex items-center justify-center rounded-2xl border-2 border-slate-200 bg-slate-50 text-slate-500 font-black text-sm tracking-widest uppercase transition-all peer-checked:border-blue-500 peer-checked:bg-blue-500 peer-checked:text-white group-hover:border-blue-200 dark:bg-zinc-950 dark:border-zinc-800 dark:peer-checked:bg-blue-600 shadow-sm peer-checked:shadow-blue-200">
                                                     Izin
                                                 </div>
                                             </label>
                                             <label className="flex-1 relative cursor-pointer group">
                                                 <input type="radio" name="jenis" value="sakit" checked={data.jenis_laporan === 'sakit'} onChange={e => setData('jenis_laporan', e.target.value)} className="peer sr-only" />
-                                                <div className="h-full flex items-center justify-center rounded-2xl border-2 border-slate-200 bg-slate-50 text-slate-500 font-black text-sm tracking-widest uppercase transition-all peer-checked:border-amber-500 peer-checked:bg-amber-50 peer-checked:text-amber-600 group-hover:border-amber-200 dark:bg-zinc-950 dark:border-zinc-800 dark:peer-checked:bg-amber-900/20">
+                                                <div className="h-full flex items-center justify-center rounded-2xl border-2 border-slate-200 bg-slate-50 text-slate-500 font-black text-sm tracking-widest uppercase transition-all peer-checked:border-amber-500 peer-checked:bg-amber-500 peer-checked:text-white group-hover:border-amber-200 dark:bg-zinc-950 dark:border-zinc-800 dark:peer-checked:bg-amber-600 shadow-sm peer-checked:shadow-amber-200">
                                                     Sakit
                                                 </div>
                                             </label>
@@ -483,7 +523,6 @@ export default function Welcome({
 
             </div>
 
-            {/* Custom Floating Styles */}
             <style>{`
                 @keyframes floating {
                     0% { transform: translateY(0px) rotate(3deg); }

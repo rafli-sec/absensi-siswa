@@ -32,7 +32,7 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
     // Inisialisasi Form
     const { data, setData, post, processing } = useForm({
         kelas: filters.kelas || '',
-        tanggal: filters.tanggal || new Date().toISOString().split('T')[0],
+        tanggal: filters.tanggal || new Date().toISOString().split('T')[0], // Otomatis hari ini
         mapel: filters.mapel || '',
         jam_ke: filters.jam_ke || 1,
         absensi: [] as any[]
@@ -109,7 +109,7 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
                 
                 {/* CARD HEADER & FILTER */}
                 <Card className="rounded-3xl border-none shadow-xl shadow-slate-200/40 overflow-hidden">
-                    <CardHeader className="p-5 md:p-6 border-b border-slate-100 bg-white">
+                    <CardHeader className="p-5 md:p-6 border-b border-slate-100 ">
                         <CardTitle className="text-lg md:text-xl font-black text-slate-800 flex items-center gap-3">
                             <div className="p-2.5 bg-blue-600 rounded-xl text-white shadow-lg shadow-blue-200">
                                 <Plus size={20} />
@@ -117,7 +117,7 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
                             Input Absensi Baru
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="p-5 md:p-6 bg-slate-50/50">
+                    <CardContent className="p-5 md:p-6 /50">
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                             
                             {/* KELAS */}
@@ -130,7 +130,7 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
                                     }} 
                                     value={data.kelas}
                                 >
-                                    <SelectTrigger className="rounded-xl border-slate-200 bg-white h-11">
+                                    <SelectTrigger className="rounded-xl border-slate-200  h-11">
                                         <SelectValue placeholder="Pilih Kelas" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -151,7 +151,7 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
                                     }} 
                                     value={data.mapel}
                                 >
-                                    <SelectTrigger className="rounded-xl border-slate-200 bg-white h-11">
+                                    <SelectTrigger className="rounded-xl border-slate-200  h-11">
                                         <div className="flex items-center gap-2 overflow-hidden">
                                             <BookOpen size={14} className="text-slate-400 shrink-0" />
                                             <SelectValue placeholder="Pilih Mapel" />
@@ -176,7 +176,7 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
                                     }} 
                                     value={data.jam_ke?.toString()}
                                 >
-                                    <SelectTrigger className="rounded-xl border-slate-200 bg-white h-11">
+                                    <SelectTrigger className="rounded-xl border-slate-200  h-11">
                                         <div className="flex items-center gap-2">
                                             <Clock size={14} className="text-slate-400" />
                                             <SelectValue placeholder="Jam" />
@@ -190,19 +190,15 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
                                 </Select>
                             </div>
 
-                            {/* TANGGAL - MENGGUNAKAN INPUT BAWAAN */}
+                            {/* TANGGAL - DIBUAT READONLY / DISABLED */}
                             <div className="space-y-2">
                                 <Label className="text-[10px] font-black uppercase text-slate-500">Tanggal</Label>
                                 <div className="relative">
                                     <Input 
                                         type="date" 
                                         value={data.tanggal} 
-                                        onChange={(e) => {
-                                            const newDate = e.target.value;
-                                            setData('tanggal', newDate);
-                                            handleRefreshData({ tanggal: newDate });
-                                        }} 
-                                        className="pl-9 rounded-xl h-11 bg-white border-slate-200" 
+                                        disabled // <-- Menambahkan disabled agar tidak bisa di-klik
+                                        className="pl-9 rounded-xl h-11 border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed opacity-100" 
                                     />
                                     <Calendar className="absolute left-3 top-3.5 text-slate-400 pointer-events-none" size={14} />
                                 </div>
@@ -215,7 +211,7 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
                 <form onSubmit={handleSubmit} className="space-y-3 relative">
                     {siswas.length > 0 ? (
                         siswas.map((siswa: any, index: number) => (
-                            <div key={siswa.id_siswa} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-3 md:p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:border-blue-300">
+                            <div key={siswa.id_siswa} className=" rounded-2xl border border-slate-200 shadow-sm p-3 md:p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:border-blue-300">
                                 <div className="flex items-center gap-3">
                                     <div className="h-10 w-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 shrink-0">
                                         <UserCircle2 size={24} strokeWidth={1.5} />
@@ -246,10 +242,10 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
                                     {['hadir', 'izin', 'sakit', 'alpha'].map((status) => {
                                         const isActive = getStatus(siswa.id_siswa) === status;
                                         const colors: any = {
-                                            hadir: isActive ? 'bg-emerald-500 text-white border-emerald-500 shadow-md' : 'bg-slate-50 text-slate-500 border-slate-200',
-                                            izin: isActive ? 'bg-blue-500 text-white border-blue-500 shadow-md' : 'bg-slate-50 text-slate-500 border-slate-200',
-                                            sakit: isActive ? 'bg-amber-500 text-white border-amber-500 shadow-md' : 'bg-slate-50 text-slate-500 border-slate-200',
-                                            alpha: isActive ? 'bg-rose-500 text-white border-rose-500 shadow-md' : 'bg-slate-50 text-slate-500 border-slate-200',
+                                            hadir: isActive ? 'bg-emerald-500 text-white border-emerald-500 shadow-md' : ' text-slate-500 border-slate-200',
+                                            izin: isActive ? 'bg-blue-500 text-white border-blue-500 shadow-md' : ' text-slate-500 border-slate-200',
+                                            sakit: isActive ? 'bg-amber-500 text-white border-amber-500 shadow-md' : ' text-slate-500 border-slate-200',
+                                            alpha: isActive ? 'bg-rose-500 text-white border-rose-500 shadow-md' : ' text-slate-500 border-slate-200',
                                         };
 
                                         return (
@@ -267,14 +263,14 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
                             </div>
                         ))
                     ) : (
-                        <div className="py-20 text-center rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50">
+                        <div className="py-20 text-center rounded-3xl border-2 border-dashed border-slate-200 ">
                             <p className="text-slate-400 font-medium text-sm text-balance px-4 text-center">Silakan pilih kelas, mata pelajaran, dan jam untuk memunculkan daftar siswa.</p>
                         </div>
                     )}
 
                     <div className="h-32 md:h-40 w-full pointer-events-none"></div>
 
-                    <div className="fixed bottom-0 left-0 md:left-64 right-0 p-4 bg-white/90 backdrop-blur-xl border-t border-slate-200 z-40">
+                    <div className="fixed bottom-0 left-0 md:left-64 right-0 p-4 /90 backdrop-blur-xl border-t border-slate-200 z-40">
                         <div className="max-w-4xl mx-auto flex justify-end">
                             <Button 
                                 type="submit" 
@@ -291,8 +287,8 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
                 {/* MODAL LAPORAN ORTU */}
                 {isModalOpen && selectedSiswa && selectedSiswa.laporan_ortu && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-                        <div className="bg-white rounded-[2rem] w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95">
-                            <div className="bg-slate-50 p-5 border-b border-slate-100 flex justify-between items-center">
+                        <div className=" rounded-[2rem] w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95">
+                            <div className=" p-5 border-b border-slate-100 flex justify-between items-center">
                                 <div className="flex items-center gap-2">
                                     <div className={`p-2 rounded-xl text-white ${selectedSiswa.laporan_ortu.jenis === 'sakit' ? 'bg-amber-500' : 'bg-blue-500'}`}>
                                         <AlertCircle size={20} />
@@ -305,7 +301,7 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
                             </div>
                             <div className="p-6 space-y-4">
                                 <Label className="text-[10px] font-black uppercase text-slate-400">Pesan Wali Murid:</Label>
-                                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-medium italic text-slate-700">
+                                <div className=" border border-slate-200 rounded-2xl p-4 text-sm font-medium italic text-slate-700">
                                     "{selectedSiswa.laporan_ortu.pesan}"
                                 </div>
                                 {selectedSiswa.laporan_ortu.status_laporan === 'menunggu' ? (
@@ -325,7 +321,7 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
                                             Terima Izin
                                         </button>
                                     </div>
-                                ) : (//a
+                                ) : (
                                     <div className="pt-4 border-t border-slate-100 text-center">
                                         <p className="text-xs font-black uppercase text-emerald-600 flex items-center justify-center gap-2">
                                             <CheckCircle2 size={16} /> Telah {selectedSiswa.laporan_ortu.status_laporan}

@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react'; // Tambah usePage
-import { BookOpen, Folder, LayoutGrid, Users, ClipboardCheck, PhoneCall, MessageCircleCodeIcon } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Users, ClipboardCheck, PhoneCall, MessageCircleCodeIcon, ClipboardList, FileSpreadsheet } from 'lucide-react';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -43,7 +43,13 @@ export function AppSidebar() {
         {
             title: 'Absensi Siswa',
             href: '/guru/absensi',
-            icon: ClipboardCheck,
+            icon: ClipboardList, 
+            role: 'guru', 
+        },
+        {
+            title: 'Rekap Absensi',
+            href: '/guru/rekap',
+            icon: FileSpreadsheet, 
             role: 'guru', 
         },
         {
