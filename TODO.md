@@ -1,10 +1,12 @@
-# Task: Create Rekap Absen feature (/guru/rekap)
+# Dynamic Absensi Matrix Columns
 
-## Steps from plan:
-- [x] 1. Create TODO.md
-- [x] 2. Create app/Http/Controllers/Guru/RekapController.php (index: summary stats by kelas/mapel/jam/date like AbsensiController@index)
-- [x] 3. Edit routes/web.php (add GET /guru/rekap -> RekapController@index name('guru.rekap.index'))
-- [x] 4. Edit resources/js/pages/guru/rekap/index.tsx (display rekapAbsensi as summary table/cards + filters)
-- [x] 5. npm run dev (rebuild JS)
+**Status**: ⏳ In Progress
 
-- [ ] 6. Test & complete
+## Steps:
+- [ ] **Step 1**: Backend - Add `tanggalPertemuan` to rekapAbsensi data in `index()` type='kelas', sanitize year from bulan filter
+- [ ] **Step 2**: Frontend - Update `showDetail()` to use dynamic `detailSession.tanggalPertemuan.map()`, fix status lookup
+- [ ] **Step 3**: PDF - `@foreach($tanggalPertemuan as $tgl)` replace hardcoded loops
+- [ ] **Step 4**: Test modal/PDF with real data
+
+**Current Step**: Step 1
+

@@ -89,10 +89,17 @@ Route::middleware(['auth', 'verified', 'guru'])->prefix('guru')->name('guru.')->
     Route::get('/absensi/show/{kelas}/{tanggal}', [AbsensiController::class, 'show'])->name('absensi.show'); 
     Route::delete('/absensi/{kelas}/{tanggal}', [AbsensiController::class, 'destroy'])->name('absensi.destroy');
     Route::get('/absensi/edit/{kelas}/{tanggal}', [AbsensiController::class, 'edit'])->name('absensi.edit'); 
-    Route::get('/rekap', [RekapController::class, 'index'])->name('rekap.index');
     Route::put('/laporan/{id}/validasi', [AbsensiController::class, 'validasiLaporan'])->name('laporan.validasi');   
-});
 
+    // --- FITUR REKAP & EXPORT PDF ---
+    Route::get('/rekap', [RekapController::class, 'index'])->name('rekap.index');
+    Route::get('/rekap/cetak-pdf', [RekapController::class, 'cetakPdf'])->name('rekap.pdf'); // Cetak Global
+    
+    // Cetak Detail per Baris (Kelas, Mapel, Siswa)
+    Route::get('/rekap/export-pdf', [RekapController::class, 'exportDetailPDF'])->name('rekap.export_pdf');
+    Route::get('/rekap/export-mapel-pdf', [RekapController::class, 'exportMapelPDF'])->name('rekap.export_mapel_pdf');
+    Route::get('/rekap/export-siswa-pdf', [RekapController::class, 'exportSiswaPDF'])->name('rekap.export_siswa_pdf');
+});
 
 
 Route::get('/api/siswa-by-kelas/{kelas}', [PublicController::class, 'getSiswaByKelas']);
