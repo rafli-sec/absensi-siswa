@@ -21,7 +21,7 @@ const mapelOptions = [
     'Seni Budaya',
     'PJOK',
     'Bhs. Daerah',
-    'IPA/TIK',
+    'TIK',
     'Bimbingan Konseling (BK)'
 ];
 

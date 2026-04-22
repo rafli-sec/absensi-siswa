@@ -10,7 +10,7 @@ import { useState } from 'react';
 const mapelOptions = [
     'Pend. Agama Islam (PAI)', 'Pend. Agama Kristen (PAK)', 'Pend. Pancasila',
     'Bhs. Indonesia', 'Matematika', 'IPA', 'IPS', 'Bhs. Inggris',
-    'Seni Budaya', 'PJOK', 'Bhs. Daerah', 'IPA/TIK', 'Bimbingan Konseling (BK)'
+    'Seni Budaya', 'PJOK', 'Bhs. Daerah', 'TIK', 'Bimbingan Konseling (BK)'
 ];
 const jamOptions = Array.from({ length: 9 }, (_, i) => i + 1);
 const bulanOptions = [
