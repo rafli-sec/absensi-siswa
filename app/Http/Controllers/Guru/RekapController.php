@@ -26,7 +26,12 @@ class RekapController extends Controller
         $mapel = $request->input('mapel');
         $jam_ke = $request->input('jam_ke');
 
-        $kelasOptions = DB::table('siswas')->select('kelas')->distinct()->pluck('kelas');
+        $kelasOptions = DB::table('siswas')
+        ->select('kelas')
+        ->distinct()
+        ->orderByRaw('CAST(REGEXP_SUBSTR(kelas, "^[0-9]+") AS UNSIGNED)')
+        ->orderByRaw('REGEXP_SUBSTR(kelas, "[A-Z]+$")')
+        ->pluck('kelas');
 
         if (!$idGuru) {
             return Inertia::render('guru/rekap/index', [
