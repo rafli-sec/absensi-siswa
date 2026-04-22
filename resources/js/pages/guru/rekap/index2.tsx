@@ -74,7 +74,16 @@ export default function Rekap({ rekapAbsensi = [], filters, kelasOptions = [], t
 
     const handlePrintPDFGlobal = () => {
         const queryParams = new URLSearchParams({ type, bulan, kelas, mapel, jam_ke: jamKe }).toString();
-        window.open(route('guru.rekap.pdf') + '?' + queryParams, '_blank');
+        const url = route('guru.rekap.pdf') + '?' + queryParams;
+
+        // Download langsung tanpa buka tab baru
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = '';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     const handleExportRowPDF = (item: any) => {
@@ -89,7 +98,15 @@ export default function Rekap({ rekapAbsensi = [], filters, kelasOptions = [], t
             const queryParams = new URLSearchParams({ id_siswa: item.id_siswa, bulan: bulan }).toString();
             url = route('guru.rekap.export_siswa_pdf') + '?' + queryParams;
         }
-        window.open(url, '_blank');
+
+        // Download langsung tanpa buka tab baru
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = '';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     const totalHadir = rekapAbsensi.reduce((sum: number, item: any) => sum + (item.hadir || 0), 0);

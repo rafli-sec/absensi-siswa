@@ -1,377 +1,637 @@
 <?php
 
-namespace App\Http\Controllers\Guru; 
+namespace App\Http\Controllers\Guru;
 
-use App\Http\Controllers\Controller; 
+use App\Http\Controllers\Controller;
 use App\Models\Absensi;
 use App\Models\Siswa;
+use App\Models\Guru;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 
 class RekapController extends Controller
 {
+    /**
+     * Tampilan utama rekap dengan filter
+     */
     public function index(Request $request)
     {
         $user = auth()->user();
-        $idGuru = $user->guru->id_guru ?? null;
+        $guru = Guru::where('user_id', $user->id)->first();
+        $idGuru = $guru->id_guru ?? null;
 
-        $type = $request->input('type', 'kelas');
-
-        $bulan = $request->input('bulan');
-        $tanggal_mulai = $request->input('tanggal_mulai');
-        $tanggal_akhir = $request->input('tanggal_akhir');
+        // Ambil filter dari request
+        $type = $request->input('type', 'kelas'); // kelas, mapel, siswa
+        $semester = $request->input('semester');
         $kelas = $request->input('kelas');
         $mapel = $request->input('mapel');
-        $jam_ke = $request->input('jam_ke');
+        $idSiswa = $request->input('id_siswa');
+        $tahunAjaran = $request->input('tahun_ajaran', config('app.tahun_ajaran', '2024/2025'));
 
-        $kelasOptions = DB::table('siswas')->select('kelas')->distinct()->pluck('kelas');
+        // Data untuk dropdown filter
+        $kelasOptions = Siswa::where('status', 'aktif')
+            ->select('kelas')
+            ->distinct()
+            ->orderBy('kelas', 'asc')
+            ->pluck('kelas');
 
-        if (!$idGuru) {
+        $mapelOptions = $idGuru ? Absensi::where('id_guru', $idGuru)
+            ->select('mapel')
+            ->distinct()
+            ->pluck('mapel') : [];
+
+        $siswaOptions = $kelas ? Siswa::where('kelas', $kelas)
+            ->where('status', 'aktif')
+            ->orderBy('nama_siswa')
+            ->get(['id_siswa', 'nis', 'nama_siswa']) : collect();
+
+        // Validasi minimal filter
+        if (!$idGuru || !$semester || !$kelas) {
             return Inertia::render('guru/rekap/index', [
-                'rekapAbsensi' => [],
+                'rekapData' => [],
                 'filters' => $request->all(),
                 'kelasOptions' => $kelasOptions,
-                'type' => $type
+                'mapelOptions' => $mapelOptions,
+                'siswaOptions' => $siswaOptions,
+                'type' => $type,
+                'tahun_ajaran' => $tahunAjaran,
             ]);
         }
 
-        $query = Absensi::with('siswa')->where('id_guru', $idGuru);
-
-        if ($kelas) {
-            $query->whereHas('siswa', fn($q) => $q->where('kelas', $kelas));
-        }
-        if ($mapel) {
-            $query->where('mapel', $mapel);
-        }
-
-        // =========================
-        // MODE 1: KELAS
-        // =========================
-        if ($type === 'kelas') {
-    if ($bulan) $query->whereMonth('tanggal', $bulan);
-    if ($jam_ke) $query->where('jam_ke', $jam_ke);
-
-    $allAbsensi = $query->get();
-
-    $rekapAbsensi = $allAbsensi->groupBy(function ($item) {
-        return $item->siswa->kelas . '||' . $item->mapel . '||' . $item->jam_ke;
-    })->map(function ($group) {
-        $first = $group->first();
-        $kelas = $first->siswa->kelas;
-
-        // Ambil semua tanggal unik dari group ini
-        $tanggalPertemuan = $group->pluck('tanggal')->unique()->sort()->values();
-
-        // Build detail_semua dengan statusByDate
-        $daftarSiswa = Siswa::where('kelas', $kelas)->orderBy('nama_siswa')->get();
-        $absensiByStudent = $group->groupBy('id_siswa');
-
-        $detail_semua = $daftarSiswa->map(function ($siswa) use ($absensiByStudent) {
-            $statusByDate = [];
-            $riwayat = $absensiByStudent->get($siswa->id_siswa) ?? collect();
-            foreach ($riwayat as $record) {
-                $statusByDate[$record->tanggal] = $record->status_kehadiran;
-            }
-            return [
-                'siswa' => $siswa,
-                'statusByDate' => $statusByDate,
-                'nis' => $siswa->nis ?? '-',
-            ];
-        });
-
-        return [
-            'kelas'            => $kelas,
-            'mapel'            => $first->mapel,
-            'jam_ke'           => $first->jam_ke,
-            'total_siswa'      => Siswa::where('kelas', $kelas)->count(),
-            'hadir'            => $group->where('status_kehadiran', 'hadir')->count(),
-            'izin'             => $group->where('status_kehadiran', 'izin')->count(),
-            'sakit'            => $group->where('status_kehadiran', 'sakit')->count(),
-            'alpha'            => $group->where('status_kehadiran', 'alpha')->count(),
-            'tanggalPertemuan' => $tanggalPertemuan,
-            'detail_semua'     => $detail_semua,     
-        ];
-    })->values();
-}
-
-        // =========================
-        // MODE 2: MAPEL
-        // =========================
-        elseif ($type === 'mapel') {
-            if ($bulan) $query->whereMonth('tanggal', $bulan);
-
-            $rekapAbsensi = $query->get()->groupBy('mapel')->map(function ($group, $mapel) {
-                return [
-                    'mapel' => $mapel,
-                    'total_pertemuan' => $group->count(),
-                    'hadir' => $group->where('status_kehadiran', 'hadir')->count(),
-                    'izin' => $group->where('status_kehadiran', 'izin')->count(),
-                    'sakit' => $group->where('status_kehadiran', 'sakit')->count(),
-                    'alpha' => $group->where('status_kehadiran', 'alpha')->count(),
-                    'detail_semua' => $group->values() // ✅ Tambahan Baru
-                ];
-            })->values();
+        // Validasi tambahan untuk type tertentu
+        if ($type === 'mapel' && !$mapel) {
+            return Inertia::render('guru/rekap/index', [
+                'rekapData' => [],
+                'filters' => $request->all(),
+                'kelasOptions' => $kelasOptions,
+                'mapelOptions' => $mapelOptions,
+                'siswaOptions' => $siswaOptions,
+                'type' => $type,
+                'tahun_ajaran' => $tahunAjaran,
+            ]);
         }
 
-        // =========================
-        // MODE 3: SISWA
-        // =========================
-        else {
-            if ($tanggal_mulai && $tanggal_akhir) {
-                $query->whereBetween('tanggal', [$tanggal_mulai, $tanggal_akhir]);
-            }
-
-            $rekapAbsensi = $query->get()->groupBy('id_siswa')->map(function ($group) {
-                $siswa = $group->first()->siswa;
-
-                return [
-                    'nama_siswa' => $siswa->nama_siswa,
-                    'kelas' => $siswa->kelas,
-                    'hadir' => $group->where('status_kehadiran', 'hadir')->count(),
-                    'izin' => $group->where('status_kehadiran', 'izin')->count(),
-                    'sakit' => $group->where('status_kehadiran', 'sakit')->count(),
-                    'alpha' => $group->where('status_kehadiran', 'alpha')->count(),
-                    'total' => $group->count(),
-                    'detail_semua' => $group->values() // ✅ Tambahan Baru
-                ];
-            })->values();
+        if ($type === 'siswa' && !$idSiswa) {
+            return Inertia::render('guru/rekap/index', [
+                'rekapData' => [],
+                'filters' => $request->all(),
+                'kelasOptions' => $kelasOptions,
+                'mapelOptions' => $mapelOptions,
+                'siswaOptions' => $siswaOptions,
+                'type' => $type,
+                'tahun_ajaran' => $tahunAjaran,
+            ]);
         }
+
+        // Rentang bulan berdasarkan semester
+        $rentangBulan = $semester === 'ganjil' 
+            ? [7, 8, 9, 10, 11, 12] 
+            : [1, 2, 3, 4, 5, 6];
+
+        // Panggil method sesuai type
+        $rekapData = match ($type) {
+            'mapel' => $this->getRekapPerMapel($idGuru, $kelas, $mapel, $rentangBulan, $tahunAjaran),
+            'siswa' => $this->getRekapPerSiswa($idSiswa, $idGuru, $rentangBulan, $tahunAjaran),
+            default => $this->getRekapPerKelas($idGuru, $kelas, $rentangBulan, $tahunAjaran),
+        };
 
         return Inertia::render('guru/rekap/index', [
-            'rekapAbsensi' => $rekapAbsensi,
+            'rekapData' => $rekapData,
             'filters' => $request->all(),
             'kelasOptions' => $kelasOptions,
-            'type' => $type
+            'mapelOptions' => $mapelOptions,
+            'siswaOptions' => $siswaOptions,
+            'type' => $type,
+            'selectedSiswa' => $idSiswa ? Siswa::find($idSiswa) : null,
+            'tahun_ajaran' => $tahunAjaran,
         ]);
     }
 
-    public function exportDetailPDF(Request $request)
-{
-    $kelas = $request->kelas;
-    $mapel = $request->mapel;
-    // Tangkap parameter bulan dari React
-    $bulanFilter = $request->bulan; 
-    
-    $user = auth()->user();
-    if (!$user || !$user->guru) {
-        abort(403, 'Akses ditolak: Data Guru tidak ditemukan.');
-    }
-    $idGuru = $user->guru->id_guru;
+    /**
+     * REKAP PER KELAS
+     * Semua siswa, semua mapel dalam satu kelas
+     */
+    private function getRekapPerKelas($idGuru, $kelas, $rentangBulan, $tahunAjaran)
+    {
+        // Ambil semua siswa di kelas
+        $daftarSiswa = Siswa::where('kelas', $kelas)
+            ->where('status', 'aktif')
+            ->orderBy('nama_siswa')
+            ->get();
 
-    $daftarSiswa = Siswa::where('kelas', $kelas)->orderBy('nama_siswa', 'asc')->get();
+        // Ambil semua absensi guru ini di kelas tersebut
+        $semuaAbsensi = Absensi::where('id_guru', $idGuru)
+            ->whereIn(DB::raw('MONTH(tanggal)'), $rentangBulan)
+            ->whereHas('siswa', fn($q) => $q->where('kelas', $kelas))
+            ->get();
 
-    $absensi = Absensi::where('id_guru', $idGuru)
-                ->where('mapel', $mapel)
-                ->whereHas('siswa', fn($q) => $q->where('kelas', $kelas))
-                ->when($bulanFilter, fn($q) => $q->whereMonth('tanggal', $bulanFilter)) // Filter bulan jika ada
-                ->get()
-                ->groupBy('id_siswa');
+        // Ambil daftar mapel unik
+        $daftarMapel = $semuaAbsensi->pluck('mapel')->unique()->sort()->values();
 
-    $tanggalPertemuan = Absensi::where('id_guru', $idGuru)
-                        ->where('mapel', $mapel)
-                        ->whereHas('siswa', fn($q) => $q->where('kelas', $kelas))
-                        ->when($bulanFilter, fn($q) => $q->whereMonth('tanggal', $bulanFilter)) // Filter bulan jika ada
-                        ->distinct()
-                        ->orderBy('tanggal', 'asc')
-                        ->pluck('tanggal');
+        // Hitung total pertemuan per mapel
+        $totalPertemuanPerMapel = [];
+        foreach ($daftarMapel as $m) {
+            $totalPertemuanPerMapel[$m] = $semuaAbsensi
+                ->where('mapel', $m)
+                ->groupBy('tanggal')
+                ->count();
+        }
 
-    // --- LOGIKA MENENTUKAN NAMA BULAN ---
-    $namaBulan = 'Semua Bulan / Semester';
-    if ($bulanFilter) {
-        $bulanArray = [
-            '01' => 'Januari', '02' => 'Februari', '03' => 'Maret', '04' => 'April', 
-            '05' => 'Mei', '06' => 'Juni', '07' => 'Juli', '08' => 'Agustus', 
-            '09' => 'September', '10' => 'Oktober', '11' => 'November', '12' => 'Desember'
-        ];
-        $namaBulan = $bulanArray[$bulanFilter] ?? 'Semua Bulan';
-    } elseif ($tanggalPertemuan->isNotEmpty()) {
-        // Jika tidak difilter, ambil bulan dari pertemuan pertama
-        $namaBulan = \Carbon\Carbon::parse($tanggalPertemuan->first())->translatedFormat('F Y');
-    }
-
-    $data = [
-        'title' => 'Rekap Absensi Kehadiran Siswa',
-        'tahun_ajaran' => '2025/2026', 
-        'semester' => 'Genap',
-        'kelas' => $kelas,
-        'mapel' => $mapel,
-        'dosen' => $user->name ?? 'Guru Pengajar',
-        'bulan_cetak' => $namaBulan, 
-        'daftarSiswa' => $daftarSiswa,
-        'absensi' => $absensi,
-        'tanggalPertemuan' => $tanggalPertemuan
-    ];
-
-    $pdf = Pdf::loadView('pdf.rekap_matriks', $data)->setPaper('a4', 'landscape');
-    $filename = "Rekap_Absensi_" . preg_replace('/[^a-zA-Z0-9]/', '_', $kelas . '_' . $mapel) . ".pdf";
-    return $pdf->download($filename);
-}
-
-public function exportMapelPDF(Request $request)
-{
-    $mapel = $request->mapel;
-    $user = auth()->user();
-    $idGuru = $user->guru->id_guru;
-
-    $rekap = Absensi::where('id_guru', $idGuru)
-        ->where('mapel', $mapel)
-        ->with('siswa')
-        ->get()
-        ->groupBy(fn($item) => $item->siswa->kelas);
-
-    $data = [
-        'title' => 'Rekap Kehadiran Per Mata Pelajaran',
-        'mapel' => $mapel,
-        'guru' => $user->name,
-        'rekap' => $rekap,
-        'tanggal' => date('d-m-Y')
-    ];
-
-    $pdf = Pdf::loadView('pdf.rekap_mapel', $data)->setPaper('a4', 'portrait');
-    return $pdf->download("Rekap_Mapel_" . str_replace(' ', '_', $mapel) . ".pdf");
-}
-
-public function exportSiswaPDF(Request $request)
-{
-    $idSiswa = $request->id_siswa;
-    $siswa = Siswa::findOrFail($idSiswa);
-    $user = auth()->user();
-
-    $riwayat = Absensi::where('id_siswa', $idSiswa)
-        ->where('id_guru', $user->guru->id_guru)
-        ->orderBy('tanggal', 'desc')
-        ->get();
-
-    $data = [
-        'title' => 'Laporan Kehadiran Siswa',
-        'siswa' => $siswa,
-        'guru' => $user->name,
-        'riwayat' => $riwayat,
-    ];
-
-    $pdf = Pdf::loadView('pdf.rekap_siswa', $data)->setPaper('a4', 'portrait');
-    return $pdf->download("Rekap_Siswa_" . str_replace(' ', '_', $siswa->nama_siswa) . ".pdf");
-}
-
-public function detail(Request $request, $type, $identifier)
-{
-    $user = auth()->user();
-    if (!$user || !$user->guru) {
-        abort(403, 'Unauthorized');
-    }
-    $idGuru = $user->guru->id_guru;
-    $bulan = $request->input('bulan');
-
-    if ($type === 'kelas') {
-        // Parse identifier: "KelasX-MapelY-JamZ"
-        $parts = explode('-', $identifier);
-        if (count($parts) < 3) abort(400, 'Invalid identifier');
-        
-        $kelas = $parts[0];
-        $mapel = $parts[1];
-        $jamKe = $parts[2] ?? null;
-
-        $daftarSiswa = Siswa::where('kelas', $kelas)->orderBy('nama_siswa')->get();
-        
-        $absensiQuery = Absensi::where('id_guru', $idGuru)
-            ->where('mapel', $mapel)
-            ->whereHas('siswa', fn($q) => $q->where('kelas', $kelas));
-        
-        if ($bulan) $absensiQuery->whereMonth('tanggal', $bulan);
-        if ($jamKe) $absensiQuery->where('jam_ke', $jamKe);
-
-        $absensi = $absensiQuery->get()->groupBy('id_siswa');
-        $tanggalPertemuan = $absensiQuery->distinct()->pluck('tanggal')->sort()->values();
-
-        // Build statusByDate matrix for frontend
-        $detail_semua = $daftarSiswa->map(function ($siswa) use ($absensi) {
-            $statusByDate = [];
-            $riwayat = $absensi->get($siswa->id_siswa) ?? collect();
+        // Rekap per siswa (total semua mapel)
+        $rekapSiswa = $daftarSiswa->map(function ($siswa) use ($semuaAbsensi, $daftarMapel, $totalPertemuanPerMapel) {
+            $absSiswa = $semuaAbsensi->where('id_siswa', $siswa->id_siswa);
             
-            foreach ($riwayat as $record) {
-                $statusByDate[$record->tanggal] = $record->status_kehadiran;
+            $totalHadir = 0;
+            $totalSakit = 0;
+            $totalIzin = 0;
+            $totalAlpha = 0;
+            $totalPertemuanSemuaMapel = 0;
+            
+            $perMapel = [];
+            
+            foreach ($daftarMapel as $mapel) {
+                $absMapel = $absSiswa->where('mapel', $mapel);
+                $totalPertemuan = $totalPertemuanPerMapel[$mapel];
+                
+                $hadir = $absMapel->where('status_kehadiran', 'hadir')->count();
+                $sakit = $absMapel->where('status_kehadiran', 'sakit')->count();
+                $izin = $absMapel->where('status_kehadiran', 'izin')->count();
+                $alpha = $absMapel->where('status_kehadiran', 'alpha')->count();
+                
+                $totalHadir += $hadir;
+                $totalSakit += $sakit;
+                $totalIzin += $izin;
+                $totalAlpha += $alpha;
+                $totalPertemuanSemuaMapel += $totalPertemuan;
+                
+                $persentase = $totalPertemuan > 0 
+                    ? round((($totalPertemuan - ($sakit + $izin + $alpha)) / $totalPertemuan) * 100) 
+                    : 0;
+                
+                $perMapel[] = [
+                    'mapel' => $mapel,
+                    'hadir' => $hadir,
+                    'sakit' => $sakit,
+                    'izin' => $izin,
+                    'alpha' => $alpha,
+                    'total_pertemuan' => $totalPertemuan,
+                    'persentase' => $persentase,
+                ];
             }
             
+            $totalKehadiran = $totalHadir + $totalSakit + $totalIzin + $totalAlpha;
+            $persentaseTotal = $totalPertemuanSemuaMapel > 0 
+                ? round(($totalKehadiran / $totalPertemuanSemuaMapel) * 100) 
+                : 0;
+            
             return [
-                'siswa' => $siswa,
-                'statusByDate' => $statusByDate,
-                'status_kehadiran' => $riwayat->first()?->status_kehadiran ?? null,
-                'nis' => $siswa->nis ?? '-'
+                'id_siswa' => $siswa->id_siswa,
+                'nis' => $siswa->nis,
+                'nama_siswa' => $siswa->nama_siswa,
+                'jenis_kelamin' => $siswa->jenis_kelamin,
+                'total_hadir' => $totalHadir,
+                'total_sakit' => $totalSakit,
+                'total_izin' => $totalIzin,
+                'total_alpha' => $totalAlpha,
+                'persentase' => $persentaseTotal,
+                'per_mapel' => $perMapel,
             ];
         });
 
-        // Calculate totals
-        $hadir = $absensi->flatten()->where('status_kehadiran', 'hadir')->count();
-        $izin = $absensi->flatten()->where('status_kehadiran', 'izin')->count();
-        $sakit = $absensi->flatten()->where('status_kehadiran', 'sakit')->count();
-        $alpha = $absensi->flatten()->where('status_kehadiran', 'alpha')->count();
+        // Daftar tanggal pertemuan unik (semua mapel)
+        $tanggalPertemuan = $semuaAbsensi->pluck('tanggal')->unique()->sort()->values();
+        $totalPertemuan = $tanggalPertemuan->count();
+
+        // Rekap per siswa dengan status per tanggal
+        $detailSemua = $daftarSiswa->map(function ($siswa) use ($semuaAbsensi, $tanggalPertemuan) {
+            $absSiswa = $semuaAbsensi->where('id_siswa', $siswa->id_siswa);
+            
+            $statusByDate = [];
+            $totalHadir = 0;
+            $totalSakit = 0;
+            $totalIzin = 0;
+            $totalAlpha = 0;
+            
+            foreach ($tanggalPertemuan as $tgl) {
+                $abs = $absSiswa->firstWhere('tanggal', $tgl);
+                $status = $abs ? $abs->status_kehadiran : '-';
+                $statusByDate[Carbon::parse($tgl)->format('Y-m-d')] = $status;
+                
+                // Hitung total per status
+                if ($status === 'hadir') $totalHadir++;
+                elseif ($status === 'sakit') $totalSakit++;
+                elseif ($status === 'izin') $totalIzin++;
+                elseif ($status === 'alpha') $totalAlpha++;
+            }
+            
+            return [
+                'siswa' => [
+                    'id_siswa' => $siswa->id_siswa,
+                    'nis' => $siswa->nis,
+                    'nama_siswa' => $siswa->nama_siswa,
+                    'jenis_kelamin' => $siswa->jenis_kelamin,
+                ],
+                'statusByDate' => $statusByDate,
+                'total_hadir' => $totalHadir,
+                'total_sakit' => $totalSakit,
+                'total_izin' => $totalIzin,
+                'total_alpha' => $totalAlpha,
+                'total_pertemuan' => $tanggalPertemuan->count(),
+            ];
+        });
+
+        // Statistik kelas
+        $totalHadir = $rekapSiswa->sum('total_hadir');
+        $totalSakit = $rekapSiswa->sum('total_sakit');
+        $totalIzin = $rekapSiswa->sum('total_izin');
+        $totalAlpha = $rekapSiswa->sum('total_alpha');
+
+        // Hitung rata-rata kelas
+        $rataKelas = $rekapSiswa->avg('persentase');
+
+        // Siswa terbaik (3 teratas)
+        $siswaTerbaik = $rekapSiswa->sortByDesc('persentase')->take(3)->values();
+
+        // Siswa bermasalah (< 70%)
+        $siswaBermasalah = $rekapSiswa->filter(fn($s) => $s['persentase'] < 70)->values();
 
         return [
-            'kelas' => $kelas,
-            'mapel' => $mapel,
-            'jam_ke' => $jamKe,
-            'bulan' => $bulan,
-            'detail_semua' => $detail_semua,
-            'tanggalPertemuan' => $tanggalPertemuan,
-            'hadir' => $hadir,
-            'izin' => $izin,
-            'sakit' => $sakit,
-            'alpha' => $alpha,
-            'total_pertemuan' => $tanggalPertemuan->count()
-        ];
-
-    } elseif ($type === 'mapel') {
-        $mapel = $identifier;
-        $bulan = $request->input('bulan');
-
-        $absensiQuery = Absensi::where('id_guru', $idGuru)->where('mapel', $mapel);
-        if ($bulan) $absensiQuery->whereMonth('tanggal', $bulan);
-        
-        $absensi = $absensiQuery->get();
-        
-        $hadir = $absensi->where('status_kehadiran', 'hadir')->count();
-        $izin = $absensi->where('status_kehadiran', 'izin')->count();
-        $sakit = $absensi->where('status_kehadiran', 'sakit')->count();
-        $alpha = $absensi->where('status_kehadiran', 'alpha')->count();
-
-        return [
-            'mapel' => $mapel,
-            'hadir' => $hadir,
-            'izin' => $izin,
-            'sakit' => $sakit,
-            'alpha' => $alpha,
-            'total_pertemuan' => $absensi->count()
-        ];
-
-    } elseif ($type === 'siswa') {
-        $idSiswa = $identifier;
-        $bulan = $request->input('bulan');
-
-        $siswa = Siswa::findOrFail($idSiswa);
-        $absensiQuery = Absensi::where('id_siswa', $idSiswa)->where('id_guru', $idGuru);
-        if ($bulan) $absensiQuery->whereMonth('tanggal', $bulan);
-        
-        $absensi = $absensiQuery->get();
-
-        $hadir = $absensi->where('status_kehadiran', 'hadir')->count();
-        $izin = $absensi->where('status_kehadiran', 'izin')->count();
-        $sakit = $absensi->where('status_kehadiran', 'sakit')->count();
-        $alpha = $absensi->where('status_kehadiran', 'alpha')->count();
-
-        return [
-            'nama_siswa' => $siswa->nama_siswa,
-            'kelas' => $siswa->kelas,
-            'hadir' => $hadir,
-            'izin' => $izin,
-            'sakit' => $sakit,
-            'alpha' => $alpha,
-            'total' => $absensi->count(),
-            'riwayat' => $absensi
+            [
+                'type' => 'kelas',
+                'kelas' => $kelas,
+                'mapel' => 'Semua Mapel',
+                'tahun_ajaran' => $tahunAjaran,
+                'total_pertemuan' => $totalPertemuan,
+                'tanggalPertemuan' => $tanggalPertemuan,
+                'detail_semua' => $detailSemua,
+                'hadir' => $totalHadir,
+                'sakit' => $totalSakit,
+                'izin' => $totalIzin,
+                'alpha' => $totalAlpha,
+                'statistik' => [
+                    'total_siswa' => $daftarSiswa->count(),
+                    'rata_rata_kelas' => round($rataKelas, 1),
+                    'siswa_terbaik' => $siswaTerbaik,
+                    'siswa_bermasalah' => $siswaBermasalah,
+                ],
+            ]
         ];
     }
 
-    abort(400, 'Invalid type');
-}
+    /**
+     * REKAP PER MAPEL
+     * 1 mapel, semua siswa dalam satu kelas
+     */
+    public function getRekapPerMapel($idGuru, $kelas, $mapel, $rentangBulan, $tahunAjaran)
+    {
+        if (!$mapel) {
+            return null;
+        }
+
+        // Ambil semua siswa di kelas
+        $daftarSiswa = Siswa::where('kelas', $kelas)
+            ->where('status', 'aktif')
+            ->orderBy('nama_siswa')
+            ->get();
+
+        // Ambil semua absensi untuk mapel ini
+        $semuaAbsensi = Absensi::where('id_guru', $idGuru)
+            ->where('mapel', $mapel)
+            ->whereIn(DB::raw('MONTH(tanggal)'), $rentangBulan)
+            ->whereHas('siswa', fn($q) => $q->where('kelas', $kelas))
+            ->get();
+
+        // Daftar tanggal pertemuan unik
+        $tanggalPertemuan = $semuaAbsensi->pluck('tanggal')->unique()->sort()->values();
+        $totalPertemuan = $tanggalPertemuan->count();
+
+        // Rekap per siswa
+        $rekapSiswa = $daftarSiswa->map(function ($siswa) use ($semuaAbsensi, $totalPertemuan, $tanggalPertemuan) {
+            $absSiswa = $semuaAbsensi->where('id_siswa', $siswa->id_siswa);
+            
+            $hadir = $absSiswa->where('status_kehadiran', 'hadir')->count();
+            $sakit = $absSiswa->where('status_kehadiran', 'sakit')->count();
+            $izin = $absSiswa->where('status_kehadiran', 'izin')->count();
+            $alpha = $absSiswa->where('status_kehadiran', 'alpha')->count();
+            
+            $persentase = $totalPertemuan > 0 
+                ? round((($totalPertemuan - ($sakit + $izin + $alpha)) / $totalPertemuan) * 100) 
+                : 0;
+            
+            // Status per tanggal
+            $statusByDate = [];
+            foreach ($tanggalPertemuan as $tgl) {
+                $abs = $absSiswa->firstWhere('tanggal', $tgl);
+                $statusByDate[Carbon::parse($tgl)->format('Y-m-d')] = $abs ? $abs->status_kehadiran : '-';
+            }
+            
+            return [
+                'id_siswa' => $siswa->id_siswa,
+                'nis' => $siswa->nis,
+                'nama_siswa' => $siswa->nama_siswa,
+                'jenis_kelamin' => $siswa->jenis_kelamin,
+                'hadir' => $hadir,
+                'sakit' => $sakit,
+                'izin' => $izin,
+                'alpha' => $alpha,
+                'persentase' => $persentase,
+                'status_by_date' => $statusByDate,
+            ];
+        });
+
+        // Statistik
+        $rataKelas = $rekapSiswa->avg('persentase');
+        $siswaTerbaik = $rekapSiswa->sortByDesc('persentase')->take(3)->values();
+        $siswaBermasalah = $rekapSiswa->filter(fn($s) => $s['persentase'] < 70)->values();
+
+        // Distribusi predikat
+        $predikat = [
+            'sangat_baik' => $rekapSiswa->filter(fn($s) => $s['persentase'] >= 90)->count(),
+            'baik' => $rekapSiswa->filter(fn($s) => $s['persentase'] >= 75 && $s['persentase'] < 90)->count(),
+            'cukup' => $rekapSiswa->filter(fn($s) => $s['persentase'] >= 60 && $s['persentase'] < 75)->count(),
+            'kurang' => $rekapSiswa->filter(fn($s) => $s['persentase'] < 60)->count(),
+        ];
+
+        return [
+            'type' => 'mapel',
+            'kelas' => $kelas,
+            'mapel' => $mapel,
+            'tahun_ajaran' => $tahunAjaran,
+            'total_pertemuan' => $totalPertemuan,
+            'tanggal_pertemuan' => $tanggalPertemuan,
+            'rekap_siswa' => $rekapSiswa,
+            'statistik' => [
+                'rata_rata_kelas' => round($rataKelas, 1),
+                'siswa_terbaik' => $siswaTerbaik,
+                'siswa_bermasalah' => $siswaBermasalah,
+                'predikat' => $predikat,
+            ],
+        ];
+    }
+
+    /**
+     * REKAP PER SISWA
+     * 1 siswa, semua mapel dalam satu semester
+     */
+    private function getRekapPerSiswa($idSiswa, $idGuru, $rentangBulan, $tahunAjaran)
+    {
+        if (!$idSiswa) {
+            return null;
+        }
+
+        $siswa = Siswa::findOrFail($idSiswa);
+
+        // Ambil semua absensi siswa ini
+        $semuaAbsensi = Absensi::where('id_siswa', $idSiswa)
+            ->where('id_guru', $idGuru)
+            ->whereIn(DB::raw('MONTH(tanggal)'), $rentangBulan)
+            ->get();
+
+        if ($semuaAbsensi->isEmpty()) {
+            return [
+                'type' => 'siswa',
+                'siswa' => $siswa,
+                'tahun_ajaran' => $tahunAjaran,
+                'total_hadir' => 0,
+                'total_sakit' => 0,
+                'total_izin' => 0,
+                'total_alpha' => 0,
+                'persentase' => 0,
+                'predikat' => $this->getPredikat(0),
+                'rekap_mapel' => [],
+            ];
+        }
+
+        // Kelas siswa
+        $kelas = $siswa->kelas;
+
+        // Daftar mapel unik
+        $daftarMapel = $semuaAbsensi->pluck('mapel')->unique()->sort()->values();
+
+        // Hitung total pertemuan per mapel
+        $totalPertemuanPerMapel = [];
+        foreach ($daftarMapel as $mapel) {
+            $totalPertemuanPerMapel[$mapel] = Absensi::where('id_guru', $idGuru)
+                ->where('mapel', $mapel)
+                ->whereHas('siswa', fn($q) => $q->where('kelas', $kelas))
+                ->whereIn(DB::raw('MONTH(tanggal)'), $rentangBulan)
+                ->groupBy('tanggal')
+                ->count();
+        }
+
+        // Rekap per mapel
+        $rekapMapel = [];
+        $totalHadirSemua = 0;
+        $totalSakitSemua = 0;
+        $totalIzinSemua = 0;
+        $totalAlphaSemua = 0;
+        $totalPertemuanSemua = 0;
+
+        foreach ($daftarMapel as $mapel) {
+            $absMapel = $semuaAbsensi->where('mapel', $mapel);
+            $totalPertemuan = $totalPertemuanPerMapel[$mapel];
+            
+            $hadir = $absMapel->where('status_kehadiran', 'hadir')->count();
+            $sakit = $absMapel->where('status_kehadiran', 'sakit')->count();
+            $izin = $absMapel->where('status_kehadiran', 'izin')->count();
+            $alpha = $absMapel->where('status_kehadiran', 'alpha')->count();
+            
+            $totalHadirSemua += $hadir;
+            $totalSakitSemua += $sakit;
+            $totalIzinSemua += $izin;
+            $totalAlphaSemua += $alpha;
+            $totalPertemuanSemua += $totalPertemuan;
+            
+            $persentase = $totalPertemuan > 0 
+                ? round((($totalPertemuan - ($sakit + $izin + $alpha)) / $totalPertemuan) * 100) 
+                : 0;
+            
+            // Status per tanggal
+            $statusByDate = [];
+            $tanggalAbsensi = Absensi::where('id_guru', $idGuru)
+                ->where('mapel', $mapel)
+                ->whereHas('siswa', fn($q) => $q->where('kelas', $kelas))
+                ->whereIn(DB::raw('MONTH(tanggal)'), $rentangBulan)
+                ->groupBy('tanggal')
+                ->orderBy('tanggal')
+                ->pluck('tanggal');
+                
+            foreach ($tanggalAbsensi as $tgl) {
+                $abs = $absMapel->firstWhere('tanggal', $tgl);
+                $statusByDate[Carbon::parse($tgl)->format('Y-m-d')] = $abs ? $abs->status_kehadiran : '-';
+            }
+            
+            $rekapMapel[] = [
+                'mapel' => $mapel,
+                'hadir' => $hadir,
+                'sakit' => $sakit,
+                'izin' => $izin,
+                'alpha' => $alpha,
+                'persentase' => $persentase,
+                'total_pertemuan' => $totalPertemuan,
+                'status_by_date' => $statusByDate,
+            ];
+        }
+
+        // Total keseluruhan
+        $totalKehadiran = $totalHadirSemua + $totalSakitSemua + $totalIzinSemua + $totalAlphaSemua;
+        $persentaseTotal = $totalPertemuanSemua > 0 
+            ? round(($totalKehadiran / $totalPertemuanSemua) * 100) 
+            : 0;
+
+        // Predikat
+        $predikat = $this->getPredikat($persentaseTotal);
+
+        return [
+            'type' => 'siswa',
+            'siswa' => [
+                'id_siswa' => $siswa->id_siswa,
+                'nis' => $siswa->nis,
+                'nama_siswa' => $siswa->nama_siswa,
+                'kelas' => $siswa->kelas,
+                'jenis_kelamin' => $siswa->jenis_kelamin,
+                'no_hp_ortu' => $siswa->no_hp_ortu,
+            ],
+            'tahun_ajaran' => $tahunAjaran,
+            'total_hadir' => $totalHadirSemua,
+            'total_sakit' => $totalSakitSemua,
+            'total_izin' => $totalIzinSemua,
+            'total_alpha' => $totalAlphaSemua,
+            'persentase' => $persentaseTotal,
+            'predikat' => $predikat,
+            'rekap_mapel' => $rekapMapel,
+        ];
+    }
+
+    /**
+     * EXPORT PDF - REKAP PER KELAS
+     */
+    public function exportKelasPDF(Request $request)
+    {
+        $kelas = $request->kelas;
+        $semester = $request->semester ?? 'ganjil';
+        $tahunAjaran = $request->tahun_ajaran ?? config('app.tahun_ajaran', '2024/2025');
+        
+        $user = auth()->user();
+        $guru = Guru::where('user_id', $user->id)->first();
+        $idGuru = $guru->id_guru;
+
+        $rentangBulan = $semester === 'ganjil' ? [7,8,9,10,11,12] : [1,2,3,4,5,6];
+        
+        $rekapData = $this->getRekapPerKelas($idGuru, $kelas, $rentangBulan, $tahunAjaran);
+        
+        if (!$rekapData) {
+            return back()->with('error', 'Data tidak ditemukan');
+        }
+
+        $bulanList = $semester === 'ganjil' 
+            ? [7=>'Juli',8=>'Agustus',9=>'September',10=>'Oktober',11=>'November',12=>'Desember']
+            : [1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni'];
+
+        $pdf = Pdf::loadView('pdf.rekap_kelas', [
+            'kelas' => $kelas,
+            'semester' => strtoupper($semester),
+            'tahun_ajaran' => $tahunAjaran,
+            'guru' => $user->name,
+            'bulanList' => $bulanList,
+            'rekapData' => $rekapData,
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download("Rekap_Kelas_{$kelas}_" . str_replace('/', '-', $tahunAjaran) . ".pdf");
+    }
+
+    /**
+     * EXPORT PDF - REKAP PER MAPEL
+     */
+    public function exportMapelPDF(Request $request)
+    {
+        $kelas = $request->kelas;
+        $mapel = $request->mapel;
+        $semester = $request->semester ?? 'ganjil';
+        $tahunAjaran = $request->tahun_ajaran ?? config('app.tahun_ajaran', '2024/2025');
+        
+        $user = auth()->user();
+        $guru = Guru::where('user_id', $user->id)->first();
+        $idGuru = $guru->id_guru;
+
+        $rentangBulan = $semester === 'ganjil' ? [7,8,9,10,11,12] : [1,2,3,4,5,6];
+        
+        $rekapData = $this->getRekapPerMapel($idGuru, $kelas, $mapel, $rentangBulan, $tahunAjaran);
+        
+        if (!$rekapData) {
+            return back()->with('error', 'Data tidak ditemukan');
+        }
+
+        $bulanList = $semester === 'ganjil' 
+            ? [7=>'Juli',8=>'Agustus',9=>'September',10=>'Oktober',11=>'November',12=>'Desember']
+            : [1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni'];
+
+        $pdf = Pdf::loadView('pdf.rekap_mapel', [
+            'kelas' => $kelas,
+            'mapel' => $mapel,
+            'semester' => strtoupper($semester),
+            'tahun_ajaran' => $tahunAjaran,
+            'guru' => $user->name,
+            'bulanList' => $bulanList,
+            'rekapData' => $rekapData,
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download("Rekap_Mapel_{$mapel}_{$kelas}_" . str_replace('/', '-', $tahunAjaran) . ".pdf");
+    }
+
+    /**
+     * EXPORT PDF - REKAP PER SISWA
+     */
+    public function exportSiswaPDF(Request $request)
+    {
+        $idSiswa = $request->id_siswa;
+        $semester = $request->semester ?? 'ganjil';
+        $tahunAjaran = $request->tahun_ajaran ?? config('app.tahun_ajaran', '2024/2025');
+        
+        $user = auth()->user();
+        $guru = Guru::where('user_id', $user->id)->first();
+        $idGuru = $guru->id_guru;
+
+        $rentangBulan = $semester === 'ganjil' ? [7,8,9,10,11,12] : [1,2,3,4,5,6];
+        
+        $rekapData = $this->getRekapPerSiswa($idSiswa, $idGuru, $rentangBulan, $tahunAjaran);
+        
+        if (!$rekapData) {
+            return back()->with('error', 'Data tidak ditemukan');
+        }
+
+        $bulanList = $semester === 'ganjil' 
+            ? [7=>'Juli',8=>'Agustus',9=>'September',10=>'Oktober',11=>'November',12=>'Desember']
+            : [1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni'];
+
+        $pdf = Pdf::loadView('pdf.rekap_siswa', [
+            'semester' => strtoupper($semester),
+            'tahun_ajaran' => $tahunAjaran,
+            'guru' => $user->name,
+            'bulanList' => $bulanList,
+            'rekapData' => $rekapData,
+        ])->setPaper('a4', 'landscape');
+
+        $namaSiswa = $rekapData['siswa']['nama_siswa'];
+        return $pdf->download("Rekap_Siswa_{$namaSiswa}_" . str_replace('/', '-', $tahunAjaran) . ".pdf");
+    }
+
+    /**
+     * Helper: Dapatkan predikat berdasarkan persentase
+     */
+    private function getPredikat($persentase)
+    {
+        if ($persentase >= 90) {
+            return ['label' => 'SANGAT BAIK', 'warna' => 'green'];
+        } elseif ($persentase >= 75) {
+            return ['label' => 'BAIK', 'warna' => 'blue'];
+        } elseif ($persentase >= 60) {
+            return ['label' => 'CUKUP', 'warna' => 'yellow'];
+        } else {
+            return ['label' => 'KURANG', 'warna' => 'red'];
+        }
+    }
 }
