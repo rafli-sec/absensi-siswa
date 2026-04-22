@@ -50,29 +50,51 @@ class RekapController extends Controller
         // MODE 1: KELAS
         // =========================
         if ($type === 'kelas') {
-            if ($bulan) $query->whereMonth('tanggal', $bulan);
-            if ($jam_ke) $query->where('jam_ke', $jam_ke);
+    if ($bulan) $query->whereMonth('tanggal', $bulan);
+    if ($jam_ke) $query->where('jam_ke', $jam_ke);
 
-            $rekapAbsensi = $query->get()->groupBy(function ($item) {
-                return $item->siswa->kelas . '-' . $item->mapel . '-' . $item->jam_ke . '-' . $item->tanggal;
-            })->map(function ($group) {
-                $first = $group->first();
-                $kelas = $first->siswa->kelas;
+    $allAbsensi = $query->get();
 
-                return [
-                    'kelas' => $kelas,
-                    'mapel' => $first->mapel,
-                    'jam_ke' => $first->jam_ke,
-                    'tanggal' => $first->tanggal,
-                    'total_siswa' => Siswa::where('kelas', $kelas)->count(),
-                    'hadir' => $group->where('status_kehadiran', 'hadir')->count(),
-                    'izin' => $group->where('status_kehadiran', 'izin')->count(),
-                    'sakit' => $group->where('status_kehadiran', 'sakit')->count(),
-                    'alpha' => $group->where('status_kehadiran', 'alpha')->count(),
-                    'detail_semua' => $group->values() 
-                ];
-            })->values();
-        }
+    $rekapAbsensi = $allAbsensi->groupBy(function ($item) {
+        return $item->siswa->kelas . '||' . $item->mapel . '||' . $item->jam_ke;
+    })->map(function ($group) {
+        $first = $group->first();
+        $kelas = $first->siswa->kelas;
+
+        // Ambil semua tanggal unik dari group ini
+        $tanggalPertemuan = $group->pluck('tanggal')->unique()->sort()->values();
+
+        // Build detail_semua dengan statusByDate
+        $daftarSiswa = Siswa::where('kelas', $kelas)->orderBy('nama_siswa')->get();
+        $absensiByStudent = $group->groupBy('id_siswa');
+
+        $detail_semua = $daftarSiswa->map(function ($siswa) use ($absensiByStudent) {
+            $statusByDate = [];
+            $riwayat = $absensiByStudent->get($siswa->id_siswa) ?? collect();
+            foreach ($riwayat as $record) {
+                $statusByDate[$record->tanggal] = $record->status_kehadiran;
+            }
+            return [
+                'siswa' => $siswa,
+                'statusByDate' => $statusByDate,
+                'nis' => $siswa->nis ?? '-',
+            ];
+        });
+
+        return [
+            'kelas'            => $kelas,
+            'mapel'            => $first->mapel,
+            'jam_ke'           => $first->jam_ke,
+            'total_siswa'      => Siswa::where('kelas', $kelas)->count(),
+            'hadir'            => $group->where('status_kehadiran', 'hadir')->count(),
+            'izin'             => $group->where('status_kehadiran', 'izin')->count(),
+            'sakit'            => $group->where('status_kehadiran', 'sakit')->count(),
+            'alpha'            => $group->where('status_kehadiran', 'alpha')->count(),
+            'tanggalPertemuan' => $tanggalPertemuan, // ✅ WAJIB ADA
+            'detail_semua'     => $detail_semua,     // ✅ Sudah ada statusByDate
+        ];
+    })->values();
+}
 
         // =========================
         // MODE 2: MAPEL
@@ -176,7 +198,7 @@ class RekapController extends Controller
         'kelas' => $kelas,
         'mapel' => $mapel,
         'dosen' => $user->name ?? 'Guru Pengajar',
-        'bulan_cetak' => $namaBulan, // <-- TAMBAHKAN INI
+        'bulan_cetak' => $namaBulan, 
         'daftarSiswa' => $daftarSiswa,
         'absensi' => $absensi,
         'tanggalPertemuan' => $tanggalPertemuan
@@ -231,5 +253,125 @@ public function exportSiswaPDF(Request $request)
 
     $pdf = Pdf::loadView('pdf.rekap_siswa', $data)->setPaper('a4', 'portrait');
     return $pdf->download("Rekap_Siswa_" . str_replace(' ', '_', $siswa->nama_siswa) . ".pdf");
+}
+
+public function detail(Request $request, $type, $identifier)
+{
+    $user = auth()->user();
+    if (!$user || !$user->guru) {
+        abort(403, 'Unauthorized');
+    }
+    $idGuru = $user->guru->id_guru;
+    $bulan = $request->input('bulan');
+
+    if ($type === 'kelas') {
+        // Parse identifier: "KelasX-MapelY-JamZ"
+        $parts = explode('-', $identifier);
+        if (count($parts) < 3) abort(400, 'Invalid identifier');
+        
+        $kelas = $parts[0];
+        $mapel = $parts[1];
+        $jamKe = $parts[2] ?? null;
+
+        $daftarSiswa = Siswa::where('kelas', $kelas)->orderBy('nama_siswa')->get();
+        
+        $absensiQuery = Absensi::where('id_guru', $idGuru)
+            ->where('mapel', $mapel)
+            ->whereHas('siswa', fn($q) => $q->where('kelas', $kelas));
+        
+        if ($bulan) $absensiQuery->whereMonth('tanggal', $bulan);
+        if ($jamKe) $absensiQuery->where('jam_ke', $jamKe);
+
+        $absensi = $absensiQuery->get()->groupBy('id_siswa');
+        $tanggalPertemuan = $absensiQuery->distinct()->pluck('tanggal')->sort()->values();
+
+        // Build statusByDate matrix for frontend
+        $detail_semua = $daftarSiswa->map(function ($siswa) use ($absensi) {
+            $statusByDate = [];
+            $riwayat = $absensi->get($siswa->id_siswa) ?? collect();
+            
+            foreach ($riwayat as $record) {
+                $statusByDate[$record->tanggal] = $record->status_kehadiran;
+            }
+            
+            return [
+                'siswa' => $siswa,
+                'statusByDate' => $statusByDate,
+                'status_kehadiran' => $riwayat->first()?->status_kehadiran ?? null,
+                'nis' => $siswa->nis ?? '-'
+            ];
+        });
+
+        // Calculate totals
+        $hadir = $absensi->flatten()->where('status_kehadiran', 'hadir')->count();
+        $izin = $absensi->flatten()->where('status_kehadiran', 'izin')->count();
+        $sakit = $absensi->flatten()->where('status_kehadiran', 'sakit')->count();
+        $alpha = $absensi->flatten()->where('status_kehadiran', 'alpha')->count();
+
+        return [
+            'kelas' => $kelas,
+            'mapel' => $mapel,
+            'jam_ke' => $jamKe,
+            'bulan' => $bulan,
+            'detail_semua' => $detail_semua,
+            'tanggalPertemuan' => $tanggalPertemuan,
+            'hadir' => $hadir,
+            'izin' => $izin,
+            'sakit' => $sakit,
+            'alpha' => $alpha,
+            'total_pertemuan' => $tanggalPertemuan->count()
+        ];
+
+    } elseif ($type === 'mapel') {
+        $mapel = $identifier;
+        $bulan = $request->input('bulan');
+
+        $absensiQuery = Absensi::where('id_guru', $idGuru)->where('mapel', $mapel);
+        if ($bulan) $absensiQuery->whereMonth('tanggal', $bulan);
+        
+        $absensi = $absensiQuery->get();
+        
+        $hadir = $absensi->where('status_kehadiran', 'hadir')->count();
+        $izin = $absensi->where('status_kehadiran', 'izin')->count();
+        $sakit = $absensi->where('status_kehadiran', 'sakit')->count();
+        $alpha = $absensi->where('status_kehadiran', 'alpha')->count();
+
+        return [
+            'mapel' => $mapel,
+            'hadir' => $hadir,
+            'izin' => $izin,
+            'sakit' => $sakit,
+            'alpha' => $alpha,
+            'total_pertemuan' => $absensi->count()
+        ];
+
+    } elseif ($type === 'siswa') {
+        $idSiswa = $identifier;
+        $bulan = $request->input('bulan');
+
+        $siswa = Siswa::findOrFail($idSiswa);
+        $absensiQuery = Absensi::where('id_siswa', $idSiswa)->where('id_guru', $idGuru);
+        if ($bulan) $absensiQuery->whereMonth('tanggal', $bulan);
+        
+        $absensi = $absensiQuery->get();
+
+        $hadir = $absensi->where('status_kehadiran', 'hadir')->count();
+        $izin = $absensi->where('status_kehadiran', 'izin')->count();
+        $sakit = $absensi->where('status_kehadiran', 'sakit')->count();
+        $alpha = $absensi->where('status_kehadiran', 'alpha')->count();
+
+        return [
+            'nama_siswa' => $siswa->nama_siswa,
+            'kelas' => $siswa->kelas,
+            'hadir' => $hadir,
+            'izin' => $izin,
+            'sakit' => $sakit,
+            'alpha' => $alpha,
+            'total' => $absensi->count(),
+            'riwayat' => $absensi
+        ];
+    }
+
+    abort(400, 'Invalid type');
 }
 }

@@ -99,6 +99,9 @@ Route::middleware(['auth', 'verified', 'guru'])->prefix('guru')->name('guru.')->
     Route::get('/rekap/export-pdf', [RekapController::class, 'exportDetailPDF'])->name('rekap.export_pdf');
     Route::get('/rekap/export-mapel-pdf', [RekapController::class, 'exportMapelPDF'])->name('rekap.export_mapel_pdf');
     Route::get('/rekap/export-siswa-pdf', [RekapController::class, 'exportSiswaPDF'])->name('rekap.export_siswa_pdf');
+    
+    // Detail endpoint for modal
+    Route::get('/rekap/detail/{type}/{identifier}', [RekapController::class, 'detail'])->name('rekap.detail');
 });
 
 

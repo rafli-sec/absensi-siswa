@@ -1,12 +1,17 @@
-# Dynamic Absensi Matrix Columns
+er run dev
+# Fix Rekap Modal - No Absence Data Issue
 
-**Status**: ⏳ In Progress
+## Current Status: ✅ Plan Approved
 
-## Steps:
-- [ ] **Step 1**: Backend - Add `tanggalPertemuan` to rekapAbsensi data in `index()` type='kelas', sanitize year from bulan filter
-- [ ] **Step 2**: Frontend - Update `showDetail()` to use dynamic `detailSession.tanggalPertemuan.map()`, fix status lookup
-- [ ] **Step 3**: PDF - `@foreach($tanggalPertemuan as $tgl)` replace hardcoded loops
-- [ ] **Step 4**: Test modal/PDF with real data
+### Breakdown of Steps:
+- [x] 1. Create TODO.md ✅
+- [✅] 2. Add detail route to routes/web.php
+- [✅] 3. Add detail() method to RekapController.php
+- [✅] 4. Update frontend rekap/index.tsx to fetch detailed data on modal open
+- [ ] 5. Test modal for 'kelas' type
+- [ ] 6. Test other types ('mapel', 'siswa')
+- [ ] 7. Verify PDF consistency
+- [ ] 8. Add loading/error states
+- [ ] 9. Complete task
 
-**Current Step**: Step 1
-
+**Next Step:** Add route and backend detail endpoint
