@@ -106,7 +106,7 @@ class AbsensiController extends Controller
                 'mapel' => $mapel,
                 'jam_ke' => $jam_ke,
             ],
-            'kelasOptions' => ['7A', '7B', '7C', '8A', '8B', '8C', '9A'],
+            'kelasOptions' => ['7A', '7B', '7C', '8A', '8B', '8C', '9'],
         ]);
     }
 
@@ -130,6 +130,9 @@ class AbsensiController extends Controller
         DB::beginTransaction();
 
         try {
+            // Inisialisasi delay awal (dimulai dari 1 menit untuk siswa pertama)
+            $delayMenit = 1;
+
             foreach ($request->absensi as $item) {
                 // 1. Simpan atau Update Absensi ke Database
                 $absensi = Absensi::updateOrCreate(
@@ -175,13 +178,16 @@ class AbsensiController extends Controller
                         'status_kirim' => 'pending',
                     ]);
 
-                    // Lempar ke Antrean (Queue) 
-                    SendWaAbsensi::dispatch($log);
+                    // Lempar ke Antrean (Queue) dengan delay 1 menit per siswa
+                    SendWaAbsensi::dispatch($log)->delay(now()->addMinutes($delayMenit));
+
+                    // Tambahkan 1 menit untuk antrean siswa selanjutnya
+                    $delayMenit++;
                 }
             }
 
             DB::commit();
-            return redirect()->route('guru.absensi.index')->with('success', 'Absensi berhasil disimpan. Seluruh notifikasi sedang dikirim melalui antrean sistem.');
+            return redirect()->route('guru.absensi.index')->with('success', 'Absensi berhasil disimpan. Notifikasi WA sedang dikirim bertahap ke antrean (1 menit per siswa).');
 
         } catch (\Exception $e) {
             DB::rollback();

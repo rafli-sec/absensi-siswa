@@ -30,7 +30,7 @@ export default function Edit({ siswa }: { siswa: any }) {
         put(route('admin.siswa.update', siswa.id_siswa));
     };
 
-    const kelasOptions = ['7A', '7B', '7C', '8A', '8B', '8C', '9A'];
+    const kelasOptions = ['7A', '7B', '7C', '8A', '8B', '8C', '9'];
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>

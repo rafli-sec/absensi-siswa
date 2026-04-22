@@ -26,12 +26,7 @@ class RekapController extends Controller
         $mapel = $request->input('mapel');
         $jam_ke = $request->input('jam_ke');
 
-        $kelasOptions = DB::table('siswas')
-        ->select('kelas')
-        ->distinct()
-        ->orderByRaw('CAST(REGEXP_SUBSTR(kelas, "^[0-9]+") AS UNSIGNED)')
-        ->orderByRaw('REGEXP_SUBSTR(kelas, "[A-Z]+$")')
-        ->pluck('kelas');
+        $kelasOptions = DB::table('siswas')->select('kelas')->distinct()->pluck('kelas');
 
         if (!$idGuru) {
             return Inertia::render('guru/rekap/index', [
@@ -95,8 +90,8 @@ class RekapController extends Controller
             'izin'             => $group->where('status_kehadiran', 'izin')->count(),
             'sakit'            => $group->where('status_kehadiran', 'sakit')->count(),
             'alpha'            => $group->where('status_kehadiran', 'alpha')->count(),
-            'tanggalPertemuan' => $tanggalPertemuan, // ✅ WAJIB ADA
-            'detail_semua'     => $detail_semua,     // ✅ Sudah ada statusByDate
+            'tanggalPertemuan' => $tanggalPertemuan,
+            'detail_semua'     => $detail_semua,     
         ];
     })->values();
 }
