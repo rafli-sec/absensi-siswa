@@ -37,7 +37,9 @@ class SendWaAbsensi implements ShouldQueue
     {
         $log = LogWhatsapp::find($this->logId);
 
-        if (!$log) return;
+        if (!$log || $log->status_kirim !== 'pending') {
+            return;
+        }
 
         // Gunakan token dari .env agar lebih aman
         $token = env('TOKEN_FONNTE', '1d6C5ACV1JAahRYeSAN9');

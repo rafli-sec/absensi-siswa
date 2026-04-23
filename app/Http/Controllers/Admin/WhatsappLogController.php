@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Absensi;
 use App\Models\LogWhatsapp;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 
@@ -13,38 +15,108 @@ class WhatsappLogController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
+        $statusFilter = $request->query('status', 'all');
+        $search = $request->query('search');
+        $perPage = 20;
+        $idGuruLogin = $user->role !== 'admin' ? $user->guru->id_guru : null;
 
-        // Mulai query dengan eager loading agar tidak berat (N+1 Problem)
-        $query = LogWhatsapp::with(['absensi.siswa', 'absensi.guru']);
+        if ($statusFilter === 'tidak_perlu') {
+            $query = Absensi::with(['siswa'])
+                ->where('status_kehadiran', 'hadir')
+                ->whereDoesntHave('logWhatsapp');
 
-        // --- LOGIKA FILTER BERDASARKAN ROLE ---
-        // Jika user adalah Guru (bukan admin), tampilkan hanya milik dia saja
-        if ($user->role !== 'admin') {
-            // Kita asumsikan user memiliki relasi ke table guru
-            $id_guru_login = $user->guru->id_guru; 
+            if ($idGuruLogin) {
+                $query->where('id_guru', $idGuruLogin);
+            }
 
-            $query->whereHas('absensi', function ($q) use ($id_guru_login) {
-                $q->where('id_guru', $id_guru_login);
+            if ($search) {
+                $query->whereHas('siswa', function ($sq) use ($search) {
+                    $sq->where('nama_siswa', 'like', "%{$search}%")
+                       ->orWhere('nis', 'like', "%{$search}%");
+                });
+            }
+
+            $paginated = $query->orderBy('waktu_input', 'desc')
+                ->paginate($perPage)
+                ->withQueryString();
+
+            $rows = $paginated->getCollection()->map(function ($absensi) {
+                return [
+                    'id_log' => null,
+                    'created_at' => $absensi->waktu_input,
+                    'no_tujuan' => '-',
+                    'pesan' => 'Tidak perlu WA',
+                    'status_kirim' => 'Tidak Perlu WA',
+                    'absensi' => [
+                        'siswa' => [
+                            'nama_siswa' => $absensi->siswa->nama_siswa,
+                            'kelas' => $absensi->siswa->kelas,
+                        ],
+                    ],
+                ];
             });
-        }
-        // Jika Admin, query tidak di-filter (melihat semua)
 
-        // Fitur Pencarian (Opsional)
-        if ($request->search) {
-            $query->where(function($q) use ($request) {
-                $q->where('no_tujuan', 'like', "%{$request->search}%")
-                  ->orWhereHas('absensi.siswa', function ($sq) use ($request) {
-                      $sq->where('nama_siswa', 'like', "%{$request->search}%");
-                  });
-            });
-        }
+            $logs = new LengthAwarePaginator(
+                $rows,
+                $paginated->total(),
+                $paginated->perPage(),
+                $paginated->currentPage(),
+                [
+                    'path' => LengthAwarePaginator::resolveCurrentPath(),
+                    'query' => request()->query(),
+                ]
+            );
+        } else {
+            $query = LogWhatsapp::with(['absensi.siswa', 'absensi.guru']);
 
-        $logs = $query->latest()->paginate(20)->withQueryString();
+            if ($idGuruLogin) {
+                $query->whereHas('absensi', function ($q) use ($idGuruLogin) {
+                    $q->where('id_guru', $idGuruLogin);
+                });
+            }
+
+            if ($search) {
+                $query->where(function($q) use ($search) {
+                    $q->where('no_tujuan', 'like', "%{$search}%")
+                      ->orWhereHas('absensi.siswa', function ($sq) use ($search) {
+                          $sq->where('nama_siswa', 'like', "%{$search}%")
+                             ->orWhere('nis', 'like', "%{$search}%");
+                      });
+                });
+            }
+
+            if ($statusFilter !== 'all') {
+                $query->where('status_kirim', $statusFilter);
+            }
+
+            $logs = $query->latest()->paginate($perPage)->withQueryString();
+        }
 
         return Inertia::render('whatsapp/index', [
-            'logs' => $logs->items(),
-            'filters' => $request->only(['search']),
-            'user_role' => $user->role // Kirim role ke frontend jika perlu
+            'logs' => $logs,
+            'filters' => $request->only(['search', 'status']),
+            'user_role' => $user->role,
         ]);
+    }
+
+    public function destroy(Request $request, $id)
+    {
+        $user = Auth::user();
+        $log = LogWhatsapp::with('absensi')->findOrFail($id);
+
+        if ($user->role !== 'admin') {
+            $idGuruLogin = $user->guru->id_guru;
+            if (!$log->absensi || $log->absensi->id_guru !== $idGuruLogin) {
+                abort(403);
+            }
+        }
+
+        if ($log->status_kirim !== 'pending') {
+            return redirect()->back()->with('error', 'Hanya pesan yang berstatus pending dapat dibatalkan.');
+        }
+
+        $log->update(['status_kirim' => 'gagal']);
+
+        return redirect()->back()->with('success', 'Pengiriman WhatsApp dibatalkan.');
     }
 }

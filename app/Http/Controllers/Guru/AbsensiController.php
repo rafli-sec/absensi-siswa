@@ -117,6 +117,7 @@ class AbsensiController extends Controller
             'tanggal' => 'required|date',
             'mapel' => 'required|string|max:50',
             'jam_ke' => 'required|integer|min:1',
+            'send_wa' => 'boolean',
             'absensi' => 'required|array|min:1',
             'absensi.*.id_siswa' => 'required|exists:siswas,id_siswa',
             'absensi.*.status_kehadiran' => 'required|in:hadir,izin,sakit,alpha',
@@ -149,45 +150,52 @@ class AbsensiController extends Controller
                     ]
                 );
 
-                // 2. Kirim Notifikasi via Queue untuk SEMUA status kehadiran 
-                $siswa = Siswa::find($item['id_siswa']);
+                // 2. Kirim Notifikasi via Queue HANYA jika send_wa = true
+                if ($request->send_wa) {
+                    $siswa = Siswa::find($item['id_siswa']);
 
-                if ($siswa && !empty($siswa->no_hp_ortu)) {
-                    $emoji = match($item['status_kehadiran']) {
-                        'hadir' => '✅',
-                        'sakit' => '💊',
-                        'izin'  => '📝',
-                        'alpha' => '❌',
-                        default => 'ℹ️'
-                    };
+                    if ($siswa && !empty($siswa->no_hp_ortu)) {
+                        $emoji = match($item['status_kehadiran']) {
+                            'hadir' => '✅',
+                            'sakit' => '💊',
+                            'izin'  => '📝',
+                            'alpha' => '❌',
+                            default => 'ℹ️'
+                        };
 
-                    $pesan = "*PEMBERITAHUAN ABSENSI SEKOLAH*\n\n" .
-                             "Yth. Wali Murid,\n" .
-                             "Siswa a.n: *{$siswa->nama_siswa}*\n" .
-                             "Kelas: {$request->kelas}\n" .
-                             "Mata Pelajaran: {$request->mapel}\n" .
-                             "Jam Ke: {$request->jam_ke}\n" .
-                             "Status Kehadiran: *".strtoupper($item['status_kehadiran'])."* {$emoji}\n\n" .
-                             "Terima kasih atas perhatiannya.";
+                        $pesan = "*PEMBERITAHUAN ABSENSI SEKOLAH*\n\n" .
+                                 "Yth. Wali Murid,\n" .
+                                 "Siswa a.n: *{$siswa->nama_siswa}*\n" .
+                                 "Kelas: {$request->kelas}\n" .
+                                 "Mata Pelajaran: {$request->mapel}\n" .
+                                 "Jam Ke: {$request->jam_ke}\n" .
+                                 "Status Kehadiran: *".strtoupper($item['status_kehadiran'])."* {$emoji}\n\n" .
+                                 "Terima kasih atas perhatiannya.";
 
-                    // Simpan Log ke database 
-                    $log = LogWhatsapp::create([
-                        'id_absensi' => $absensi->id_absensi,
-                        'no_tujuan' => $siswa->no_hp_ortu,
-                        'pesan' => $pesan,
-                        'status_kirim' => 'pending',
-                    ]);
+                        // Simpan Log ke database 
+                        $log = LogWhatsapp::create([
+                            'id_absensi' => $absensi->id_absensi,
+                            'no_tujuan' => $siswa->no_hp_ortu,
+                            'pesan' => $pesan,
+                            'status_kirim' => 'pending',
+                        ]);
 
-                    // Lempar ke Antrean (Queue) dengan delay 1 menit per siswa
-                    SendWaAbsensi::dispatch($log)->delay(now()->addMinutes($delayMenit));
+                        // Lempar ke Antrean (Queue) dengan delay 1 menit per siswa
+                        SendWaAbsensi::dispatch($log)->delay(now()->addMinutes($delayMenit));
 
-                    // Tambahkan 1 menit untuk antrean siswa selanjutnya
-                    $delayMenit++;
+                        // Tambahkan 1 menit untuk antrean siswa selanjutnya
+                        $delayMenit++;
+                    }
                 }
             }
 
             DB::commit();
-            return redirect()->route('guru.absensi.index')->with('success', 'Absensi berhasil disimpan. Notifikasi WA sedang dikirim bertahap ke antrean (1 menit per siswa).');
+            
+            $message = $request->send_wa 
+                ? 'Absensi berhasil disimpan. Notifikasi WA sedang dikirim bertahap ke antrean (1 menit per siswa).'
+                : 'Absensi berhasil disimpan. Notifikasi WA tidak dikirim sesuai pilihan.';
+                
+            return redirect()->route('guru.absensi.index')->with('success', $message);
 
         } catch (\Exception $e) {
             DB::rollback();

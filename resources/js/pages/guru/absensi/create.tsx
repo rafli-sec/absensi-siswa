@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Save, Plus, UserCircle2, BookOpen, Clock, Calendar, AlertCircle, X, FileText, CheckCircle2 } from 'lucide-react';
+import { Save, Plus, UserCircle2, BookOpen, Clock, Calendar, AlertCircle, X, FileText, CheckCircle2, MessageCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 // KONSTANTA DATA UNTUK DROPDOWN
@@ -35,6 +35,7 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
         tanggal: filters.tanggal || new Date().toISOString().split('T')[0], // Otomatis hari ini
         mapel: filters.mapel || '',
         jam_ke: filters.jam_ke || 1,
+        send_wa: true, // Default: kirim WA
         absensi: [] as any[]
     });
 
@@ -269,6 +270,33 @@ export default function Create({ siswas = [], filters, kelasOptions }: any) {
                     )}
 
                     <div className="h-32 md:h-40 w-full pointer-events-none"></div>
+
+                    {/* WA NOTIFICATION OPTION */}
+                    <div className="fixed bottom-20 left-0 md:left-64 right-0 p-4 z-30">
+                        <div className="max-w-4xl mx-auto">
+                            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-lg p-4">
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="checkbox"
+                                        id="send_wa"
+                                        checked={data.send_wa}
+                                        onChange={(e) => setData('send_wa', e.target.checked)}
+                                        className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2"
+                                    />
+                                    <label htmlFor="send_wa" className="text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer">
+                                        Kirim notifikasi WhatsApp ke wali murid
+                                    </label>
+                                    <div className="ml-auto text-xs text-slate-400 font-medium">
+                                        <MessageCircle size={14} className="inline mr-1" />
+                                        {data.send_wa ? 'Akan dikirim' : 'Tidak dikirim'}
+                                    </div>
+                                </div>
+                                <p className="text-xs text-slate-500 mt-2 ml-7">
+                                    Jika dicentang, sistem akan mengirim notifikasi WhatsApp ke nomor wali murid untuk setiap siswa yang diabsen.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
                     <div className="fixed bottom-0 left-0 md:left-64 right-0 p-4 /90 backdrop-blur-xl border-t border-slate-200 z-40">
                         <div className="max-w-4xl mx-auto flex justify-end">

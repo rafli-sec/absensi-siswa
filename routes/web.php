@@ -41,6 +41,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Monitoring WhatsApp (Bisa diakses keduanya dengan filter di Controller)
     // Filter: Admin lihat semua, Guru lihat miliknya saja
     Route::get('/whatsapp-monitoring', [WhatsappLogController::class, 'index'])->name('whatsapp.index');
+    Route::delete('/whatsapp-monitoring/{id}', [WhatsappLogController::class, 'destroy'])->name('whatsapp.destroy');
 });
 
 /*
