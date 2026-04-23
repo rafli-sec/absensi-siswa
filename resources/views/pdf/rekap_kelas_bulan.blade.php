@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Rekap Absensi Mapel {{ $mapel }} - Kelas {{ $kelas }}</title>
+    <title>Rekap Absensi Kelas {{ $kelas }} - {{ $nama_bulan }}</title>
     <style>
         @page { margin: 30mm 35mm; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -20,7 +20,7 @@
 
         table { width: 100%; border-collapse: collapse; font-size: 8px; }
         th, td { border: 1px solid #aaa; padding: 4px 5px; text-align: center; vertical-align: middle; }
-
+        
         thead tr:first-child th { background-color: #2c3e50; color: white; font-size: 8px; padding: 5px 4px; }
         thead tr:last-child th { background-color: #34495e; color: white; font-size: 7.5px; padding: 4px 3px; }
 
@@ -67,7 +67,7 @@
 
 <div class="header">
     <h2>REKAP ABSENSI SISWA</h2>
-    <h3>Mata Pelajaran {{ $mapel }} - Kelas {{ $kelas }}</h3>
+    <h3>Bulan {{ $nama_bulan }} {{ $tahun_ajaran }}</h3>
 </div>
 
 <div class="info-grid">
@@ -80,7 +80,7 @@
     <div class="info-right">
         <div class="info-row"><span class="info-label">Mata Pelajaran</span><span>: {{ $mapel }}</span></div>
         <div class="info-row"><span class="info-label">Guru</span><span>: {{ $guru }}</span></div>
-        <div class="info-row"><span class="info-label">Total Pertemuan</span><span>: {{ $rekapData['total_pertemuan'] ?? 0 }} kali</span></div>
+        <div class="info-row"><span class="info-label">Bulan</span><span>: {{ strtoupper($nama_bulan) }} {{ explode('/', $tahun_ajaran)[0] }}</span></div>
     </div>
 </div>
 
@@ -91,7 +91,7 @@
             <th class="col-nis" rowspan="2">NIS</th>
             <th class="col-nama" rowspan="2">Nama Siswa</th>
             <th class="col-lp" rowspan="2">L/P</th>
-            <th colspan="{{ count($rekapData['tanggal_pertemuan'] ?? []) }}">Tanggal</th>
+            <th colspan="{{ $jumlahHari }}">Tanggal</th>
             <th class="col-sum" rowspan="2">H</th>
             <th class="col-sum" rowspan="2">I</th>
             <th class="col-sum" rowspan="2">S</th>
@@ -99,39 +99,45 @@
             <th class="col-pct-w" rowspan="2">%</th>
         </tr>
         <tr>
-            @foreach($rekapData['tanggal_pertemuan'] ?? [] as $tgl)
-            <th class="col-day">{{ \Carbon\Carbon::parse($tgl)->format('d/m') }}</th>
-            @endforeach
+            @for ($d = 1; $d <= $jumlahHari; $d++)
+                <th class="col-day">{{ $d }}</th>
+            @endfor
         </tr>
     </thead>
     <tbody>
-        @foreach($rekapData['rekap_siswa'] ?? [] as $index => $siswa)
-        <tr class="{{ $index % 2 == 1 ? 'row-even' : '' }}">
-            <td>{{ $index + 1 }}</td>
-            <td class="nis">{{ $siswa['nis'] }}</td>
-            <td class="nama">{{ $siswa['nama_siswa'] }}</td>
-            <td>{{ $siswa['jenis_kelamin'] === 'perempuan' ? 'P' : 'L' }}</td>
+        @foreach ($detailSiswa as $idx => $item)
+        <tr class="{{ $idx % 2 === 1 ? 'row-even' : '' }}">
+            <td>{{ $idx + 1 }}</td>
+            <td class="nis">{{ $item['nis'] }}</td>
+            <td class="nama">{{ $item['nama_siswa'] }}</td>
+            <td>{{ $item['jenis_kelamin'] === 'perempuan' ? 'P' : 'L' }}</td>
 
-            @foreach($rekapData['tanggal_pertemuan'] ?? [] as $tgl)
+            @for ($d = 1; $d <= $jumlahHari; $d++)
                 @php
-                    $status = $siswa['status_by_date'][$tgl] ?? '-';
-                    $statusClass = match($status) {
-                        'hadir' => 'status-h',
-                        'sakit' => 'status-s',
-                        'izin' => 'status-i',
-                        'alpha' => 'status-a',
-                        default => 'status-none'
-                    };
+                    $tglKey = isset($tanggalHariMap[$d]) ? $tanggalHariMap[$d] : null;
+                    $status = $tglKey ? ($item['statusByDate'][$tglKey] ?? null) : null;
                 @endphp
-            <td class="{{ $statusClass }}">{{ $status === 'hadir' ? 'H' : ($status === 'sakit' ? 'S' : ($status === 'izin' ? 'I' : ($status === 'alpha' ? 'A' : '-'))) }}</td>
-            @endforeach
+                @if (!$tglKey)
+                    <td class="day-no-meeting">-</td>
+                @elseif ($status === 'hadir')
+                    <td class="status-h">H</td>
+                @elseif ($status === 'sakit')
+                    <td class="status-s">S</td>
+                @elseif ($status === 'izin')
+                    <td class="status-i">I</td>
+                @elseif ($status === 'alpha')
+                    <td class="status-a">A</td>
+                @else
+                    <td class="status-none">-</td>
+                @endif
+            @endfor
 
-            <td class="col-summary-h">{{ $siswa['hadir'] ?? 0 }}</td>
-            <td class="col-summary-i">{{ $siswa['izin'] ?? 0 }}</td>
-            <td class="col-summary-s">{{ $siswa['sakit'] ?? 0 }}</td>
-            <td class="col-summary-a">{{ $siswa['alpha'] ?? 0 }}</td>
-            <td class="col-pct {{ $siswa['persentase'] >= 90 ? 'pct-great' : ($siswa['persentase'] >= 75 ? 'pct-good' : ($siswa['persentase'] >= 60 ? 'pct-medium' : 'pct-bad')) }}">
-                {{ $siswa['persentase'] }}%
+            <td class="col-summary-h">{{ $item['h'] }}</td>
+            <td class="col-summary-i">{{ $item['i'] }}</td>
+            <td class="col-summary-s">{{ $item['s'] }}</td>
+            <td class="col-summary-a">{{ $item['a'] }}</td>
+            <td class="col-pct {{ $item['pct'] >= 90 ? 'pct-great' : ($item['pct'] >= 75 ? 'pct-good' : ($item['pct'] >= 60 ? 'pct-medium' : 'pct-bad')) }}">
+                {{ $item['pct'] }}%
             </td>
         </tr>
         @endforeach
@@ -140,17 +146,18 @@
 
 <div class="footer">
     <div class="legend">
-        <span class="legend-item"><div class="legend-box status-h"></div> Hadir</span>
-        <span class="legend-item"><div class="legend-box status-i"></div> Izin</span>
-        <span class="legend-item"><div class="legend-box status-s"></div> Sakit</span>
-        <span class="legend-item"><div class="legend-box status-a"></div> Alpha</span>
+        <strong>Keterangan:</strong>
+        <div class="legend-item"><div class="legend-box" style="background:#d4edda;"></div> H = Hadir</div>
+        <div class="legend-item"><div class="legend-box" style="background:#fff3cd;"></div> S = Sakit</div>
+        <div class="legend-item"><div class="legend-box" style="background:#cce5ff;"></div> I = Izin</div>
+        <div class="legend-item"><div class="legend-box" style="background:#f8d7da;"></div> A = Alpha/Tanpa Keterangan</div>
+        <div class="legend-item"><div class="legend-box" style="background:#f0f0f0;"></div> - = Tidak Ada Pertemuan</div>
     </div>
     <div class="ttd">
-        <div>{{ $guru }}, {{ \Carbon\Carbon::now()->format('d F Y') }}</div>
-        <div class="ttd-space">
-            <u>{{ $guru }}</u><br>
-            NIP. -
-        </div>
+        <div>{{ \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM Y') }}</div>
+        <div>Guru Mata Pelajaran</div>
+        <div class="ttd-space"></div>
+        <div><strong>{{ $guru }}</strong></div>
     </div>
 </div>
 

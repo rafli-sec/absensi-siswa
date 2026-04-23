@@ -92,10 +92,19 @@ Route::middleware(['auth', 'verified', 'guru'])->prefix('guru')->name('guru.')->
     Route::put('/laporan/{id}/validasi', [AbsensiController::class, 'validasiLaporan'])->name('laporan.validasi');   
 
 //    Route::get('/rekap', [RekapController::class, 'index'])->name('guru.rekap.index');
+    Route::get('rekap/export/kelas-bulan', [RekapController::class, 'exportKelasBulanPDF'])
+    ->name('rekap.export.kelas.bulan')->withoutMiddleware(['inertia']);
+
+Route::get('rekap/export/kelas-semester', [RekapController::class, 'exportKelasSemesterPDF'])
+    ->name('rekap.export.kelas.semester')->withoutMiddleware(['inertia']);
+
+Route::get('rekap/export/siswa-semester', [RekapController::class, 'exportSiswaSemesterPDF'])
+    ->name('rekap.export.siswa.semester')->withoutMiddleware(['inertia']);
+    
    Route::get('/rekap', [RekapController::class, 'index'])->name('rekap.index');
-    Route::get('/rekap/export/kelas', [RekapController::class, 'exportKelasPDF'])->name('rekap.export.kelas');
-    Route::get('/rekap/export/mapel', [RekapController::class, 'exportMapelPDF'])->name('rekap.export.mapel');
-    Route::get('/rekap/export/siswa', [RekapController::class, 'exportSiswaPDF'])->name('rekap.export.siswa');
+    Route::get('/rekap/export/kelas', [RekapController::class, 'exportKelasPDF'])->name('rekap.export.kelas')->withoutMiddleware(['inertia']);
+    Route::get('/rekap/export/mapel', [RekapController::class, 'exportMapelPDF'])->name('rekap.export.mapel')->withoutMiddleware(['inertia']);
+    Route::get('/rekap/export/siswa', [RekapController::class, 'exportSiswaPDF'])->name('rekap.export.siswa')->withoutMiddleware(['inertia']);
 });
 
 
