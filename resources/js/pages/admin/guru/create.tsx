@@ -41,7 +41,7 @@ export default function Create() {
         'Seni Budaya',
         'PJOK',
         'Bhs. Daerah',
-        'IPA/TIK',
+        'TIK',
         'Bimbingan Konseling (BK)'
     ];
 
