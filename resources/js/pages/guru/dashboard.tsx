@@ -1,7 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
-import { BookOpen, Send, Clock, PlusCircle, ArrowRight, CalendarDays } from 'lucide-react';
+import { BookOpen, Send, Clock, PlusCircle, ArrowRight, CalendarDays, Users } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -10,27 +10,34 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+interface AbsensiItem {
+    tanggal: string;
+    mapel: string;
+    jam_ke: number;
+    waktu_input: string;
+    jumlah_siswa: number;
+}
+
 interface GuruDashboardProps {
     stats: {
         total_absen_saya: number;
         wa_terkirim_saya: number;
         hari_ini: string;
     };
-    recentAbsensi: any[];
+    recentAbsensi: AbsensiItem[];
 }
 
-export default function GuruDashboard({ 
-    stats = { total_absen_saya: 0, wa_terkirim_saya: 0, hari_ini: '' }, 
-    recentAbsensi = [] 
+export default function GuruDashboard({
+    stats = { total_absen_saya: 0, wa_terkirim_saya: 0, hari_ini: '' },
+    recentAbsensi = []
 }: GuruDashboardProps) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Guru Dashboard" />
-            
-            {/* 1. Hapus max-w-7xl agar Full Width */}
+
             <div className="p-6 w-full space-y-8 animate-in fade-in duration-500">
-                
-                {/* Header Dinamis */}
+
+                {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-zinc-800 pb-6">
                     <div>
                         <h1 className="text-3xl font-black uppercase tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
@@ -40,42 +47,42 @@ export default function GuruDashboard({
                             Kelola absensi siswa dan pantau notifikasi WhatsApp secara real-time.
                         </p>
                     </div>
-                    <Link 
-                        href={route('guru.absensi.create')} 
+                    <Link
+                        href={route('guru.absensi.create')}
                         className="flex items-center gap-2 px-6 py-3 bg-[#F53003] text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-orange-200 dark:shadow-none hover:bg-orange-600 transition-all hover:scale-105"
                     >
                         <PlusCircle size={18} /> Input Absen Baru
                     </Link>
                 </div>
 
-                {/* 2. Statistik Guru yang melebar mengikuti layar */}
+                {/* Statistik */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <StatCard 
-                        title="Total Absensi Saya" 
-                        value={stats.total_absen_saya.toLocaleString()} 
-                        icon={<BookOpen size={24} />} 
-                        color="blue" 
+                    <StatCard
+                        title="Total Absensi Saya"
+                        value={stats.total_absen_saya.toLocaleString()}
+                        icon={<BookOpen size={24} />}
+                        color="blue"
                         subtitle="Record di database"
                     />
-                    
-                    <StatCard 
-                        title="WA Terkirim" 
-                        value={stats.wa_terkirim_saya.toLocaleString()} 
-                        icon={<Send size={24} />} 
-                        color="orange" 
+
+                    <StatCard
+                        title="WA Terkirim"
+                        value={stats.wa_terkirim_saya.toLocaleString()}
+                        icon={<Send size={24} />}
+                        color="orange"
                         subtitle="Status: Berhasil"
                     />
 
-                    <StatCard 
-                        title="Agenda Hari Ini" 
-                        value={stats.hari_ini} 
-                        icon={<CalendarDays size={24} />} 
-                        color="emerald" 
+                    <StatCard
+                        title="Agenda Hari Ini"
+                        value={stats.hari_ini}
+                        icon={<CalendarDays size={24} />}
+                        color="emerald"
                         subtitle="Jadwal mengajar aktif"
                     />
                 </div>
 
-                {/* 3. Tabel Riwayat dengan Rounded besar dan lebar penuh */}
+                {/* Tabel Riwayat */}
                 <div className="bg-white dark:bg-zinc-900 rounded-[2rem] border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden transition-all hover:shadow-md">
                     <div className="p-8 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center bg-slate-50/50 dark:bg-zinc-800/20">
                         <h2 className="text-xl font-black uppercase tracking-tighter text-slate-800 dark:text-white flex items-center gap-3">
@@ -93,6 +100,7 @@ export default function GuruDashboard({
                                 <tr className="bg-white dark:bg-zinc-900 text-slate-400 uppercase text-[11px] font-black tracking-widest">
                                     <th className="px-8 py-5 border-b border-slate-100 dark:border-zinc-800">Tanggal</th>
                                     <th className="px-8 py-5 border-b border-slate-100 dark:border-zinc-800">Mata Pelajaran</th>
+                                    <th className="px-8 py-5 border-b border-slate-100 dark:border-zinc-800 text-center">Jumlah Siswa</th>
                                     <th className="px-8 py-5 border-b border-slate-100 dark:border-zinc-800 text-center">Aksi</th>
                                 </tr>
                             </thead>
@@ -110,7 +118,12 @@ export default function GuruDashboard({
                                                 {absen.mapel} (Jam ke-{absen.jam_ke})
                                             </td>
                                             <td className="px-8 py-6 text-center">
-                                                <Link 
+                                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-xs font-bold">
+                                                    <Users size={12} /> {absen.jumlah_siswa} siswa
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-6 text-center">
+                                                <Link
                                                     href={route('guru.absensi.index', { tanggal: absen.tanggal })}
                                                     className="inline-flex items-center gap-2 text-[11px] font-black uppercase text-[#F53003] hover:text-orange-700 underline underline-offset-4"
                                                 >
@@ -121,7 +134,7 @@ export default function GuruDashboard({
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={3} className="px-8 py-24 text-center">
+                                        <td colSpan={4} className="px-8 py-24 text-center">
                                             <p className="text-slate-400 italic font-bold">Belum ada data absensi yang diinput.</p>
                                         </td>
                                     </tr>
@@ -130,10 +143,11 @@ export default function GuruDashboard({
                         </table>
                     </div>
                 </div>
+
             </div>
         </AppLayout>
     );
-}
+};
 
 function StatCard({ title, value, icon, color, subtitle }: any) {
     const colorClasses: any = {
