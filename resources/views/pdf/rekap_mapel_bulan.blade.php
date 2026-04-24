@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Rekap Absensi Kelas {{ $kelas }} - {{ $nama_bulan }} {{ $tahun_ajaran }}</title>
+    <title>Rekap Absensi {{ $mapel }} - Kelas {{ $kelas }} - {{ $nama_bulan }} {{ $tahun_ajaran }}</title>
     <style>
         @page { margin: 15mm 12mm; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -14,7 +14,7 @@
 
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; margin-bottom: 10px; font-size: 8.5px; }
         .info-row { display: flex; margin-bottom: 2px; }
-        .info-label { width: 90px; font-weight: bold; }
+        .info-label { width: 100px; font-weight: bold; }
 
         table { width: 100%; border-collapse: collapse; font-size: 7.5px; }
         th, td { border: 1px solid #bbb; padding: 3px 4px; text-align: center; vertical-align: middle; }
@@ -57,20 +57,21 @@
 
 <div class="header">
     <h2>REKAP ABSENSI SISWA &mdash; {{ $nama_bulan }} {{ explode('/', $tahun_ajaran)[count(explode('/', $tahun_ajaran))-1] }}</h2>
-    <h3>Kelas {{ $kelas }} &mdash; Semester {{ $semester }} &mdash; Tahun Pelajaran {{ $tahun_ajaran }}</h3>
+    <h3>Kelas {{ $kelas }} &mdash; {{ $mapel }} &mdash; Semester {{ $semester }} &mdash; Tahun Pelajaran {{ $tahun_ajaran }}</h3>
 </div>
 
 <div class="info-grid">
     <div>
         <div class="info-row"><span class="info-label">Kelas</span><span>: {{ $kelas }}</span></div>
+        <div class="info-row"><span class="info-label">Mapel</span><span>: {{ $mapel }}</span></div>
         <div class="info-row"><span class="info-label">Bulan</span><span>: {{ $nama_bulan }}</span></div>
         <div class="info-row"><span class="info-label">Semester</span><span>: {{ $semester }}</span></div>
         <div class="info-row"><span class="info-label">Tahun Ajaran</span><span>: {{ $tahun_ajaran }}</span></div>
     </div>
     <div>
         <div class="info-row"><span class="info-label">Guru</span><span>: {{ $guru }}</span></div>
-        <div class="info-row"><span class="info-label">Mapel</span><span>: Semua Mata Pelajaran</span></div>
         <div class="info-row"><span class="info-label">Jml Pertemuan</span><span>: {{ $totalPertemuan }} kali</span></div>
+        <div class="info-row"><span class="info-label">Jml Siswa</span><span>: {{ count($detailSiswa) }} orang</span></div>
         <div class="info-row"><span class="info-label">Tgl Cetak</span><span>: {{ \Carbon\Carbon::now()->format('d-M-Y H:i') }}</span></div>
     </div>
 </div>
@@ -183,3 +184,4 @@
 
 </body>
 </html>
+

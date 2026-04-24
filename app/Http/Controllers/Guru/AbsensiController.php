@@ -58,7 +58,7 @@ class AbsensiController extends Controller
     {
         $kelas = $request->input('kelas');
         $tanggal = $request->input('tanggal', Carbon::now()->format('Y-m-d'));
-        $mapel = $request->input('mapel');
+        $mapel = $request->input('mapel'); 
         $jam_ke = $request->input('jam_ke', 1);
         
         $siswas = [];
