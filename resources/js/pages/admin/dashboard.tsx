@@ -36,7 +36,7 @@ export default function AdminDashboard({ stats, recentLogs }: DashboardProps) {
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-100 dark:border-zinc-800 pb-6">
                     <div>
                         <h1 className="text-3xl font-black uppercase tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
-                            Dasboard
+                            Dashboard
                             <span className="text-orange-500 animate-bounce text-2xl">👋</span>
                         </h1>
                         <p className="text-slate-500 text-sm mt-1">

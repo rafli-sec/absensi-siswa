@@ -57,11 +57,10 @@ export default function TwoFactorRecoveryCodes({
             <CardHeader>
                 <CardTitle className="flex gap-3">
                     <LockKeyhole className="size-4" aria-hidden="true" />
-                    2FA Recovery Codes
+                    Kode Pemulihan 2FA
                 </CardTitle>
                 <CardDescription>
-                    Recovery codes let you regain access if you lose your 2FA
-                    device. Store them in a secure password manager.
+                    Kode pemulihan memungkinkan Anda mendapatkan kembali akses jika Anda kehilangan perangkat 2FA. Simpan di manager kata sandi yang aman.
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -76,7 +75,7 @@ export default function TwoFactorRecoveryCodes({
                             className="size-4"
                             aria-hidden="true"
                         />
-                        {codesAreVisible ? 'Hide' : 'View'} Recovery Codes
+                        {codesAreVisible ? 'Sembunyikan' : 'Lihat'} Kode Pemulihan
                     </Button>
 
                     {canRegenerateCodes && (
@@ -92,7 +91,7 @@ export default function TwoFactorRecoveryCodes({
                                     disabled={processing}
                                     aria-describedby="regenerate-warning"
                                 >
-                                    <RefreshCw /> Regenerate Codes
+                                    <RefreshCw /> Buat Ulang Kode
                                 </Button>
                             )}
                         </Form>
