@@ -302,4 +302,31 @@ class AbsensiController extends Controller
             ]
         ]);
     }
+
+    public function destroy(Request $request, $kelas, $tanggal)
+    {
+        $mapel = $request->query('mapel');
+        $jam_ke = $request->query('jam_ke');
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $idGuru = $user->guru->id_guru ?? null;
+
+        if (!$idGuru) {
+            return redirect()->back()->with('error', 'Profil Guru tidak ditemukan.');
+        }
+
+        // Cari siswa berdasarkan kelas
+        $idSiswas = Siswa::where('kelas', $kelas)->pluck('id_siswa');
+
+        // Hapus absensi berdasarkan kriteria
+        Absensi::whereIn('id_siswa', $idSiswas)
+            ->where('tanggal', $tanggal)
+            ->where('mapel', $mapel)
+            ->where('jam_ke', $jam_ke)
+            ->where('id_guru', $idGuru)
+            ->delete();
+
+        return redirect()->route('guru.absensi.index')->with('success', 'Data absensi berhasil dihapus.');
+    }
 }

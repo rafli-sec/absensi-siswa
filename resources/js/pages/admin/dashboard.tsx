@@ -30,21 +30,21 @@ export default function AdminDashboard({ stats, recentLogs }: DashboardProps) {
             <Head title="Admin Dashboard" />
             
             {/* Wrapper utama - Kita hapus max-w-7xl agar tidak "ketengah" dan sangat jelek */}
-            <div className="p-6 w-full space-y-8 animate-in fade-in duration-500"> 
+            <div className="p-6 w-full space-y-8"> 
                 
                 {/* 1. Header Ringkasan */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-100 dark:border-zinc-800 pb-6">
                     <div>
                         <h1 className="text-3xl font-black uppercase tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
                             Dashboard
-                            <span className="text-orange-500 animate-bounce text-2xl">👋</span>
+                            <span className="text-orange-500 text-2xl">👋</span>
                         </h1>
                         <p className="text-slate-500 text-sm mt-1">
                             Data real-time aktivitas guru dan monitoring pengiriman WhatsApp.
                         </p>
                     </div>
                     <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest rounded-2xl border border-emerald-100 dark:border-emerald-900/50">
-                        <div className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" />
+                        <div className="h-2 w-2 bg-emerald-500 rounded-full" />
                         System Online
                     </div>
                 </div>
@@ -130,7 +130,7 @@ export default function AdminDashboard({ stats, recentLogs }: DashboardProps) {
                                                     log.status_kirim === 'berhasil' 
                                                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
                                                     : log.status_kirim === 'pending'
-                                                    ? 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse'
+                                                    ? 'bg-amber-50 text-amber-700 border-amber-200'
                                                     : 'bg-rose-50 text-rose-700 border-rose-200'
                                                 }`}>
                                                     {log.status_kirim}
@@ -170,7 +170,7 @@ function StatCard({ title, value, icon, color, subtitle, action }: any) {
 
     return (
         <div className="p-8 bg-white dark:bg-zinc-900 rounded-[2rem] border border-slate-200 dark:border-zinc-800 transition-all hover:border-orange-200 dark:hover:border-orange-900 hover:shadow-xl group">
-            <div className={`h-14 w-14 rounded-2xl flex items-center justify-center mb-6 border-2 transition-transform group-hover:scale-110 group-hover:rotate-3 ${colorClasses[color]}`}>
+            <div className={`h-14 w-14 rounded-2xl flex items-center justify-center mb-6 border-2 ${colorClasses[color]}`}>
                 {icon}
             </div>
             <h3 className="text-slate-400 dark:text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] mb-1">{title}</h3>

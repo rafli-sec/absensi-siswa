@@ -35,7 +35,7 @@ export default function GuruDashboard({
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Guru Dashboard" />
 
-            <div className="p-6 w-full space-y-8 animate-in fade-in duration-500">
+            <div className="p-6 w-full space-y-8">
 
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-zinc-800 pb-6">
@@ -49,7 +49,7 @@ export default function GuruDashboard({
                     </div>
                     <Link
                         href={route('guru.absensi.create')}
-                        className="flex items-center gap-2 px-6 py-3 bg-[#F53003] text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-orange-200 dark:shadow-none hover:bg-orange-600 transition-all hover:scale-105"
+                        className="flex items-center gap-2 px-6 py-3 bg-[#F53003] text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-orange-200 dark:shadow-none hover:bg-orange-600 transition-all"
                     >
                         <PlusCircle size={18} /> Input Absen Baru
                     </Link>
@@ -158,7 +158,7 @@ function StatCard({ title, value, icon, color, subtitle }: any) {
 
     return (
         <div className="p-8 bg-white dark:bg-zinc-900 rounded-[2rem] border border-slate-200 dark:border-zinc-800 transition-all hover:border-orange-200 dark:hover:border-orange-900 hover:shadow-xl group">
-            <div className={`h-14 w-14 rounded-2xl flex items-center justify-center mb-6 border-2 transition-transform group-hover:scale-110 group-hover:rotate-3 ${colorClasses[color]}`}>
+            <div className={`h-14 w-14 rounded-2xl flex items-center justify-center mb-6 border-2 ${colorClasses[color]}`}>
                 {icon}
             </div>
             <h3 className="text-slate-400 dark:text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] mb-1">{title}</h3>

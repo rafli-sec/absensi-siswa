@@ -6,15 +6,35 @@ import {
     Send, AlertCircle, User, MessageSquare, Calendar 
 } from 'lucide-react';
 import { useEffect, useState, FormEventHandler } from 'react';
-import axios from 'axios';
 
 // --- DATA FOTO SLIDESHOW ---
 // Pastikan file gambar ini ada di folder public/images/ di project Laravel Anda
 const schoolImages = [
-    '/1.jpeg',
-    '/2.jpeg',
-    '/3.jpeg',
+    { webp: '/1.webp', jpeg: '/1.jpeg' },
+    { webp: '/2.webp', jpeg: '/2.jpeg' },
+    { webp: '/3.webp', jpeg: '/3.jpeg' },
 ];
+
+const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?q=80&w=800&auto=format&fit=crop';
+
+// Data Guru
+const listGuru = [
+    { nama: 'Haerani, S.Pd., M.Pd.', mapel: 'Kepala Sekolah / IPA', initial: 'H' },
+    { nama: 'Sukaeni, S.Pd.I., M.Pd', mapel: 'PAI', initial: 'S' },
+    { nama: 'Heri Purwono, S.Pd.', mapel: 'IPS', initial: 'H' },
+    { nama: 'Andysar Rahmat Pratama, S.Pd', mapel: 'Bhs. Indonesia', initial: 'A' },
+    { nama: 'Nur Rezky, S.Pd., M.Pd. Gr', mapel: 'PJOK', initial: 'N' },
+    { nama: 'Sunniati, S.Pd., M.Pd, Gr', mapel: 'Pend. Pancasila', initial: 'S' },
+];
+
+const listFitur = [
+    { title: 'Inovasi Digital', desc: 'Sistem absensi WhatsApp terintegrasi memudahkan pantauan wali murid.', icon: <Sparkles className="text-orange-500" /> },
+    { title: 'Karakter Unggul', desc: 'Menanamkan nilai budi pekerti luhur berlandaskan IMTAK dan IPTEK.', icon: <ShieldCheck className="text-emerald-500" /> },
+    { title: 'Kurikulum Modern', desc: 'Implementasi Kurikulum Merdeka untuk eksplorasi minat dan bakat siswa.', icon: <CheckCircle2 className="text-blue-500" /> },
+    { title: 'Fasilitas Lengkap', desc: 'Laboratorium IPA dan TIK yang mendukung kegiatan praktek siswa.', icon: <Award className="text-purple-500" /> },
+];
+
+const listKelas = ['7A', '7B', '7C', '8A', '8B', '8C', '9A'];
 
 export default function Welcome({
     canRegister = true,
@@ -27,30 +47,30 @@ export default function Welcome({
     // --- STATE UNTUK SLIDESHOW ---
     const [currentImgIdx, setCurrentImgIdx] = useState(0);
 
-    // Efek ganti gambar otomatis setiap 4 detik
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setCurrentImgIdx((prev) => (prev + 1) % schoolImages.length);
-        }, 4000);
-        return () => clearInterval(timer);
-    }, []);
+    // Slideshow dibuat statis agar tidak bergerak dan memperbaiki LCP
+    // useEffect(() => {
+    //     if (import.meta.env.DEV) return;
+    //     const timer = setInterval(() => {
+    //         setCurrentImgIdx((prev) => (prev + 1) % schoolImages.length);
+    //     }, 4000);
+    //     return () => clearInterval(timer);
+    // }, []);
 
-    // Efek deteksi scroll untuk header dinamis
+    // Efek deteksi scroll untuk header dinamis.
+    // Di-throttle lewat rAF agar handler tidak memblokir thread saat scroll cepat.
     useEffect(() => {
-        const handleScroll = () => setScrolled(window.scrollY > 50);
-        window.addEventListener('scroll', handleScroll);
+        let ticking = false;
+        const handleScroll = () => {
+            if (ticking) return;
+            ticking = true;
+            window.requestAnimationFrame(() => {
+                setScrolled(window.scrollY > 50);
+                ticking = false;
+            });
+        };
+        window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
-
-    // Data Guru
-    const listGuru = [
-        { nama: 'Haerani, S.Pd., M.Pd.', mapel: 'Kepala Sekolah / IPA', initial: 'H' },
-        { nama: 'Sukaeni, S.Pd.I., M.Pd', mapel: 'PAI', initial: 'S' },
-        { nama: 'Heri Purwono, S.Pd.', mapel: 'IPS', initial: 'H' },
-        { nama: 'Andysar Rahmat Pratama, S.Pd', mapel: 'Bhs. Indonesia', initial: 'A' },
-        { nama: 'Nur Rezky, S.Pd., M.Pd. Gr', mapel: 'PJOK', initial: 'N' },
-        { nama: 'Sunniati, S.Pd., M.Pd, Gr', mapel: 'Pend. Pancasila', initial: 'S' },
-    ];
 
     // ==========================================
     // LOGIC FORM LAPORAN ORANG TUA
@@ -78,22 +98,35 @@ export default function Welcome({
     }, [flash]);
 
     useEffect(() => {
-        if (data.kelas) {
-            setIsLoadingSiswa(true);
-            setData('id_siswa', ''); 
-            
-            axios.get(`/api/siswa-by-kelas/${data.kelas}`)
-                .then(response => {
-                    setDaftarSiswa(response.data);
-                    setIsLoadingSiswa(false);
-                })
-                .catch(error => {
-                    console.error("Gagal mengambil data siswa", error);
-                    setIsLoadingSiswa(false);
-                });
-        } else {
+        if (!data.kelas) {
             setDaftarSiswa([]);
+            return;
         }
+
+        setIsLoadingSiswa(true);
+        setData('id_siswa', '');
+
+        const controller = new AbortController();
+
+        fetch(`/api/siswa-by-kelas/${encodeURIComponent(data.kelas)}`, {
+            headers: { Accept: 'application/json' },
+            signal: controller.signal,
+        })
+            .then((response) => {
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return response.json();
+            })
+            .then((siswa) => {
+                setDaftarSiswa(siswa);
+                setIsLoadingSiswa(false);
+            })
+            .catch((error) => {
+                if (error.name === 'AbortError') return;
+                console.error('Gagal mengambil data siswa', error);
+                setIsLoadingSiswa(false);
+            });
+
+        return () => controller.abort();
     }, [data.kelas]);
 
     const submitLaporan: FormEventHandler = (e) => {
@@ -114,7 +147,9 @@ export default function Welcome({
 
     return (
         <>
-            <Head title="SMPN 51 Makassar - Cerdas & Berkarakter" />
+            <Head title="SMPN 51 Makassar - Cerdas & Berkarakter">
+                <meta name="description" content="Sistem Informasi dan Laporan Kehadiran UPT SPF SMP Negeri 51 Makassar. Kami memadukan nilai karakter dengan inovasi teknologi." />
+            </Head>
             <div className="min-h-screen bg-[#FDFDFC] text-[#1b1b18] dark:bg-[#0a0a0a] dark:text-white selection:bg-orange-100 selection:text-orange-900 scroll-smooth">
                 
                 {/* 1. DYNAMIC HEADER */}
@@ -157,9 +192,9 @@ export default function Welcome({
                     <div className="absolute top-1/4 -left-20 h-96 w-96 rounded-full bg-orange-100/50 blur-[100px] dark:bg-orange-900/10" />
                     <div className="absolute bottom-1/4 -right-20 h-96 w-96 rounded-full bg-blue-100/50 blur-[100px] dark:bg-blue-900/10" />
 
-                    <div className="relative z-10 max-w-2xl text-center lg:text-left animate-in fade-in slide-in-from-bottom-10 duration-1000">
+                    <div className="relative z-10 max-w-2xl text-center lg:text-left">
                         <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/80 border border-orange-100 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#F53003] shadow-sm backdrop-blur dark:bg-zinc-900 dark:border-zinc-800">
-                            <Sparkles size={14} className="animate-pulse" /> NPSN: 69988076
+                            <Sparkles size={14} /> NPSN: 69988076
                         </div>
                         <h1 className="mb-8 text-5xl font-black leading-[1] tracking-tighter sm:text-7xl lg:text-8xl">
                             Mencetak <br />
@@ -176,15 +211,15 @@ export default function Welcome({
                                 </div>
                                 <div>
                                     {/* <p className="text-xl font-black leading-none">18+</p> */}
-                                    <p className="text-[10px] uppercase font-bold text-slate-400">Guru Profesional</p>
+                                    <p className="text-[10px] uppercase font-bold text-slate-500">Guru Profesional</p>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
                     {/* BAGIAN SLIDESHOW FOTO SEKOLAH */}
-                    <div className="relative mt-16 w-full max-w-md lg:mt-0 lg:max-w-xl animate-in zoom-in duration-1000">
-                        <div className="relative aspect-square rounded-[4rem] bg-gradient-to-br from-orange-50 to-white p-10 dark:from-zinc-900 dark:to-zinc-950 shadow-inner overflow-hidden animate-floating">
+                    <div className="relative mt-16 w-full max-w-md lg:mt-0 lg:max-w-xl">
+                        <div className="relative aspect-square rounded-[4rem] bg-gradient-to-br from-orange-50 to-white p-10 dark:from-zinc-900 dark:to-zinc-950 shadow-inner overflow-hidden">
                              <div className="absolute inset-0 opacity-10 dark:opacity-5">
                                 <div className="grid grid-cols-6 gap-4 p-4 uppercase font-black text-orange-900">
                                     {Array(36).fill('SMP51').map((t, i) => <span key={i} className="text-[8px]">{t}</span>)}
@@ -194,16 +229,28 @@ export default function Welcome({
                             {/* Wadah Frame Foto */}
                             <div className="relative h-full w-full rounded-[3rem] border-8 border-white bg-slate-200 shadow-2xl dark:border-zinc-800 flex items-center justify-center overflow-hidden">
                                 {schoolImages.map((img, idx) => (
-                                    <img 
+                                    <picture
                                         key={idx}
-                                        src={img} 
-                                        alt={`Lingkungan Sekolah ${idx + 1}`}
-                                        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
-                                            idx === currentImgIdx ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                                        className={`absolute inset-0 w-full h-full ${
+                                            idx === currentImgIdx ? 'opacity-100 z-10' : 'opacity-0 z-0 hidden'
                                         }`}
-                                        // Gunakan placeholder fallback jika foto tidak ditemukan
-                                        onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?q=80&w=800&auto=format&fit=crop'; }}
-                                    />
+                                    >
+                                        <source srcSet={img.webp} type="image/webp" />
+                                        <img
+                                            src={img.jpeg}
+                                            alt={`Lingkungan Sekolah ${idx + 1}`}
+                                            width={640}
+                                            height={640}
+                                            // Slide pertama adalah kandidat LCP: dimuat lebih dulu dan
+                                            // diprioritaskan. Sisanya menyusul tanpa menyaingi LCP.
+                                            loading={idx === 0 ? 'eager' : 'lazy'}
+                                            fetchPriority={idx === 0 ? 'high' : 'low'}
+                                            decoding="async"
+                                            className="w-full h-full object-cover"
+                                            // Gunakan placeholder fallback jika foto tidak ditemukan
+                                            onError={(e) => { e.currentTarget.src = FALLBACK_IMAGE; }}
+                                        />
+                                    </picture>
                                 ))}
                                 {/* Efek gradien tipis di bawah foto agar terlihat elegan */}
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent z-20 pointer-events-none"></div>
@@ -242,18 +289,13 @@ export default function Welcome({
                                 </p>
                             </div>
                             <div className="lg:col-span-2 grid gap-6 sm:grid-cols-2">
-                                {[
-                                    { title: 'Inovasi Digital', desc: 'Sistem absensi WhatsApp terintegrasi memudahkan pantauan wali murid.', icon: <Sparkles className="text-orange-500" /> },
-                                    { title: 'Karakter Unggul', desc: 'Menanamkan nilai budi pekerti luhur berlandaskan IMTAK dan IPTEK.', icon: <ShieldCheck className="text-emerald-500" /> },
-                                    { title: 'Kurikulum Modern', desc: 'Implementasi Kurikulum Merdeka untuk eksplorasi minat dan bakat siswa.', icon: <CheckCircle2 className="text-blue-500" /> },
-                                    { title: 'Fasilitas Lengkap', desc: 'Laboratorium IPA dan TIK yang mendukung kegiatan praktek siswa.', icon: <Award className="text-purple-500" /> },
-                                ].map((feature, i) => (
+                                {listFitur.map((feature, i) => (
                                     <div key={i} className="group rounded-3xl border border-slate-100 bg-white p-8 transition-all hover:-translate-y-2 hover:shadow-2xl dark:bg-zinc-900 dark:border-zinc-800">
                                         <div className="mb-4 h-12 w-12 rounded-2xl bg-slate-50 flex items-center justify-center dark:bg-black group-hover:scale-110 transition-transform">
                                             {feature.icon}
                                         </div>
                                         <h3 className="mb-2 font-black uppercase tracking-tighter text-sm">{feature.title}</h3>
-                                        <p className="text-xs leading-relaxed text-slate-400 font-medium">{feature.desc}</p>
+                                        <p className="text-xs leading-relaxed text-slate-500 font-medium">{feature.desc}</p>
                                     </div>
                                 ))}
                             </div>
@@ -277,7 +319,7 @@ export default function Welcome({
                                         </div>
                                         <div>
                                             <h3 className="font-black tracking-tight text-sm mb-1 group-hover:text-[#F53003] transition-colors">{guru.nama}</h3>
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{guru.mapel}</p>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{guru.mapel}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -302,7 +344,7 @@ export default function Welcome({
                         </div>
 
                         {showSuccess && (
-                            <div className="mb-8 p-5 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-4 animate-in slide-in-from-top-4 shadow-lg shadow-emerald-100/50 dark:bg-emerald-900/20 dark:border-emerald-900/50 dark:shadow-none transition-all duration-500">
+                            <div className="mb-8 p-5 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-4 shadow-lg shadow-emerald-100/50 dark:bg-emerald-900/20 dark:border-emerald-900/50 dark:shadow-none transition-all">
                                 <div className="bg-emerald-500 p-2 rounded-full text-white">
                                     <CheckCircle2 size={24} />
                                 </div>
@@ -325,8 +367,9 @@ export default function Welcome({
                                     </h3>
                                     
                                     <div>
-                                        <label className="block text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2">Nama Lengkap Anda</label>
+                                        <label htmlFor="nama_pengirim" className="block text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2">Nama Lengkap Anda</label>
                                         <input
+                                            id="nama_pengirim"
                                             type="text"
                                             className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 focus:ring-blue-500 focus:border-blue-500 transition-all dark:bg-zinc-950 dark:border-zinc-800 dark:text-slate-200"
                                             value={data.nama_pengirim}
@@ -338,10 +381,11 @@ export default function Welcome({
                                     </div>
 
                                     <div>
-                                        <label className="block text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2">Nomor WhatsApp Aktif</label>
+                                        <label htmlFor="no_hp_pengirim" className="block text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2">Nomor WhatsApp Aktif</label>
                                         <div className="relative">
                                             <Phone size={18} className="absolute left-5 top-4 text-slate-400" />
                                             <input
+                                                id="no_hp_pengirim"
                                                 type="text"
                                                 className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-5 py-4 text-sm font-bold font-mono text-slate-800 focus:ring-blue-500 focus:border-blue-500 transition-all dark:bg-zinc-950 dark:border-zinc-800 dark:text-slate-200"
                                                 value={data.no_hp_pengirim}
@@ -361,15 +405,16 @@ export default function Welcome({
                                     </h3>
 
                                     <div>
-                                        <label className="block text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2">Pilih Kelas</label>
+                                        <label htmlFor="kelas" className="block text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2">Pilih Kelas</label>
                                         <select
+                                            id="kelas"
                                             className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 focus:ring-[#F53003] focus:border-[#F53003] transition-all cursor-pointer appearance-none dark:bg-zinc-950 dark:border-zinc-800 dark:text-slate-200"
                                             value={data.kelas}
                                             onChange={e => setData('kelas', e.target.value)}
                                             required
                                         >
                                             <option value="" disabled>-- Pilih Kelas Terlebih Dahulu --</option>
-                                            {['7A', '7B', '7C', '8A', '8B', '8C', '9A'].map(k => (
+                                            {listKelas.map(k => (
                                                 <option key={k} value={k}>Kelas {k}</option>
                                             ))}
                                         </select>
@@ -377,8 +422,9 @@ export default function Welcome({
                                     </div>
 
                                     <div>
-                                        <label className="block text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2">Nama Siswa</label>
+                                        <label htmlFor="id_siswa" className="block text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2">Nama Siswa</label>
                                         <select
+                                            id="id_siswa"
                                             className={`w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 focus:ring-[#F53003] focus:border-[#F53003] transition-all appearance-none dark:bg-zinc-950 dark:border-zinc-800 dark:text-slate-200 ${!data.kelas || isLoadingSiswa ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                                             value={data.id_siswa}
                                             onChange={e => setData('id_siswa', e.target.value)}
@@ -406,10 +452,11 @@ export default function Welcome({
                                     
                                     {/* BAGIAN TANGGAL: SUDAH DI-DISABLED AGAR SAMA DENGAN CREATE.TSX */}
                                     <div>
-                                        <label className="block text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2">Tanggal Berhalangan</label>
+                                        <label htmlFor="tanggal_izin" className="block text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2">Tanggal Berhalangan</label>
                                         <div className="relative">
                                             <Calendar size={18} className="absolute left-5 top-4 text-slate-400" />
                                             <input
+                                                id="tanggal_izin"
                                                 type="date"
                                                 className="w-full bg-slate-50/70 border border-slate-200 rounded-2xl pl-12 pr-5 py-4 text-sm font-bold text-slate-500 cursor-not-allowed dark:bg-zinc-950 dark:border-zinc-800 dark:text-slate-500 transition-all"
                                                 value={data.tanggal_izin}
@@ -417,20 +464,20 @@ export default function Welcome({
                                                 required
                                             />
                                         </div>
-                                        <p className="text-[10px] text-slate-400 font-medium mt-2 italic">*Tanggal dikunci otomatis untuk hari ini.</p>
+                                        <p className="text-[10px] text-slate-500 font-medium mt-2 italic">*Tanggal dikunci otomatis untuk hari ini.</p>
                                     </div>
 
                                     <div>
-                                        <label className="block text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2">Alasan</label>
-                                        <div className="flex gap-3 h-[54px]">
-                                            <label className="flex-1 relative cursor-pointer group">
-                                                <input type="radio" name="jenis" value="izin" checked={data.jenis_laporan === 'izin'} onChange={e => setData('jenis_laporan', e.target.value)} className="peer sr-only" />
+                                        <p className="block text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2">Alasan</p>
+                                        <div className="flex gap-3 h-[54px]" role="group" aria-label="Alasan">
+                                            <label htmlFor="jenis_izin" className="flex-1 relative cursor-pointer group">
+                                                <input id="jenis_izin" type="radio" name="jenis" value="izin" checked={data.jenis_laporan === 'izin'} onChange={e => setData('jenis_laporan', e.target.value)} className="peer sr-only" />
                                                 <div className="h-full flex items-center justify-center rounded-2xl border-2 border-slate-200 bg-slate-50 text-slate-500 font-black text-sm tracking-widest uppercase transition-all peer-checked:border-blue-500 peer-checked:bg-blue-500 peer-checked:text-white group-hover:border-blue-200 dark:bg-zinc-950 dark:border-zinc-800 dark:peer-checked:bg-blue-600 shadow-sm peer-checked:shadow-blue-200">
                                                     Izin
                                                 </div>
                                             </label>
-                                            <label className="flex-1 relative cursor-pointer group">
-                                                <input type="radio" name="jenis" value="sakit" checked={data.jenis_laporan === 'sakit'} onChange={e => setData('jenis_laporan', e.target.value)} className="peer sr-only" />
+                                            <label htmlFor="jenis_sakit" className="flex-1 relative cursor-pointer group">
+                                                <input id="jenis_sakit" type="radio" name="jenis" value="sakit" checked={data.jenis_laporan === 'sakit'} onChange={e => setData('jenis_laporan', e.target.value)} className="peer sr-only" />
                                                 <div className="h-full flex items-center justify-center rounded-2xl border-2 border-slate-200 bg-slate-50 text-slate-500 font-black text-sm tracking-widest uppercase transition-all peer-checked:border-amber-500 peer-checked:bg-amber-500 peer-checked:text-white group-hover:border-amber-200 dark:bg-zinc-950 dark:border-zinc-800 dark:peer-checked:bg-amber-600 shadow-sm peer-checked:shadow-amber-200">
                                                     Sakit
                                                 </div>
@@ -440,8 +487,9 @@ export default function Welcome({
                                 </div>
 
                                 <div>
-                                    <label className="block text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2">Keterangan Tambahan</label>
+                                    <label htmlFor="pesan" className="block text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2">Keterangan Tambahan</label>
                                     <textarea
+                                        id="pesan"
                                         className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-medium text-slate-800 focus:ring-blue-500 focus:border-blue-500 transition-all min-h-[120px] dark:bg-zinc-950 dark:border-zinc-800 dark:text-slate-200"
                                         value={data.pesan}
                                         onChange={e => setData('pesan', e.target.value)}
@@ -459,12 +507,12 @@ export default function Welcome({
                                     className="w-full md:w-auto px-12 py-5 bg-[#F53003] hover:bg-orange-600 text-white font-black uppercase tracking-widest text-sm rounded-2xl shadow-xl shadow-orange-200 flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-70 dark:shadow-none"
                                 >
                                     {processing ? (
-                                        <span className="animate-pulse flex items-center gap-2">MENGIRIM LAPORAN...</span>
+                                        <span className="flex items-center gap-2">MENGIRIM LAPORAN...</span>
                                     ) : (
                                         <><Send size={20} /> KIRIM LAPORAN SEKARANG</>
                                     )}
                                 </button>
-                                <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-6 text-center">
+                                <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-6 text-center">
                                     <AlertCircle size={14} className="text-amber-500" /> 
                                     Laporan akan langsung terhubung ke sistem absensi guru yang bertugas.
                                 </p>
@@ -489,8 +537,8 @@ export default function Welcome({
                             </p>
                             <div className="mt-10 flex gap-4">
                                 {[Instagram, Facebook].map((Icon, i) => (
-                                    <a key={i} href="#" className="h-12 w-12 rounded-2xl bg-zinc-800 flex items-center justify-center transition-all hover:bg-[#F53003] hover:-translate-y-1">
-                                        <Icon size={20} />
+                                    <a key={i} href="#" aria-label={i === 0 ? "Instagram" : "Facebook"} className="h-12 w-12 rounded-2xl bg-zinc-800 flex items-center justify-center transition-all hover:bg-[#F53003] hover:-translate-y-1">
+                                        <Icon size={20} aria-hidden="true" />
                                     </a>
                                 ))}
                             </div>
@@ -524,14 +572,6 @@ export default function Welcome({
             </div>
 
             <style>{`
-                @keyframes floating {
-                    0% { transform: translateY(0px) rotate(3deg); }
-                    50% { transform: translateY(-20px) rotate(1deg); }
-                    100% { transform: translateY(0px) rotate(3deg); }
-                }
-                .animate-floating {
-                    animation: floating 6s ease-in-out infinite;
-                }
                 html { scroll-behavior: smooth; }
             `}</style>
         </>

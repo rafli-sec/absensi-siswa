@@ -42,7 +42,7 @@ class SendWaAbsensi implements ShouldQueue
         }
 
         // Gunakan token dari .env agar lebih aman
-        $token = env('TOKEN_FONNTE', '1d6C5ACV1JAahRYeSAN9');
+        $token = env('TOKEN_FONNTE');
 
         try {
             $response = Http::withHeaders([
